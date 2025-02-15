@@ -1,19 +1,9 @@
-using NetCord;
-using NetCord.Hosting.Gateway;
-using NetCord.Hosting.Services;
-using NetCord.Hosting.Services.ApplicationCommands;
-using NetCord.Services.ApplicationCommands;
+using BranikBot.Infrastructure.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services
-    .AddDiscordGateway()
-    .AddApplicationCommands<ApplicationCommandInteraction, ApplicationCommandContext>();
+builder.Services.AddInfrastructure();
 
 var app = builder.Build();
-
-app.AddModules(typeof(Program).Assembly);
-
-app.UseGatewayEventHandlers();
 
 app.Run();

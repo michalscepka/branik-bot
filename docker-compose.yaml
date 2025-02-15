@@ -5,4 +5,4 @@
       dockerfile: BranikBot/Dockerfile
     container_name: branik_bot
     ports:
-      - 5001:8080
+      - "5001:8080"
