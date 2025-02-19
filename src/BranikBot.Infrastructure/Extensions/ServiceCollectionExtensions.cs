@@ -15,6 +15,11 @@ public static class ServiceCollectionExtensions
             .BindConfiguration(DiscordConfiguration.SectionName)
             .ValidateDataAnnotations()
             .ValidateOnStart();
+        
+        services.AddOptions<CashingConfiguration>()
+            .BindConfiguration(CashingConfiguration.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
 
         services.AddDiscordGateway((opt, sp) =>
         {
@@ -22,6 +27,10 @@ public static class ServiceCollectionExtensions
             opt.Intents = GatewayIntents.GuildMessages | GatewayIntents.MessageContent;
         });
 
+        services.AddMemoryCache();
+        services.AddHttpClient();
+        services.AddSingleton<IMessageEventHandler, BranikMessageEventHandler>();
+        services.AddSingleton<IWebScrapingService, BranikPriceService>();
         services.AddHostedService<DiscordEventHandler>();
         
         return services;
