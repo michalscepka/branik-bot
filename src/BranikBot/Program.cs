@@ -1,9 +1,34 @@
 using BranikBot.Infrastructure.Extensions;
+using Serilog;
 
-var builder = WebApplication.CreateBuilder(args);
+var environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? Logging.Environments.Production;
+Log.Logger = Logging.LoggerConfigurationExtensions.ConfigureMinimalLogging(environmentName);
 
-builder.Services.AddInfrastructure();
+try
+{
+    Log.Information("Starting web host on {env} environment.", environmentName);
+    var builder = WebApplication.CreateBuilder(args);
 
-var app = builder.Build();
+    Log.Debug("Use Serilog");
+    builder.Host.UseSerilog(
+        (context, _, loggerConfiguration) =>
+        {
+            Logging.LoggerConfigurationExtensions.SetupLogger(context.Configuration, loggerConfiguration);
+        }, preserveStaticLogger: true);
 
-app.Run();
+    Log.Debug("Adding services");
+    builder.Services.AddInfrastructure();
+
+    var app = builder.Build();
+
+    app.Run();
+}
+catch (Exception ex) when (ex is not HostAbortedException)
+{
+    Log.Fatal(ex, "Host terminated unexpectedly");
+}
+finally
+{
+    Log.Information("Shutting down application");
+    await Log.CloseAndFlushAsync();
+}

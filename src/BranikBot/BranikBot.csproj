@@ -15,6 +15,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\BranikBot.Infrastructure\BranikBot.Infrastructure.csproj" />
+      <ProjectReference Include="..\Logging\Logging.csproj" />
     </ItemGroup>
 
 </Project>
