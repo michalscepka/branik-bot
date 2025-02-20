@@ -1,5 +1,6 @@
 using System.Globalization;
 using BranikBot.Infrastructure.Configuration;
+using BranikBot.Infrastructure.Services.Abstractions;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -12,7 +13,8 @@ public class BranikPriceService : IWebScrapingService
     private readonly IMemoryCache _cache;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<BranikPriceService> _logger;
-    private readonly CashingConfiguration _cashingConfiguration;
+    private readonly CashingConfiguration _cashingConfig;
+    
     private const string CacheKey = "BranikPrice";
     private const decimal DefaultMarketPrice = 45m;
 
@@ -22,7 +24,7 @@ public class BranikPriceService : IWebScrapingService
         _cache = cache;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
-        _cashingConfiguration = cashingConfiguration.Value;
+        _cashingConfig = cashingConfiguration.Value;
     }
     
     public async Task<decimal> GetMarketPriceAsync()
@@ -38,7 +40,7 @@ public class BranikPriceService : IWebScrapingService
         if (!price.HasValue)
             return DefaultMarketPrice;
         
-        _cache.Set(CacheKey, price.Value, _cashingConfiguration.DurationMinutes);
+        _cache.Set(CacheKey, price.Value, _cashingConfig.DurationMinutes);
         _logger.LogInformation("Fetched and cached new price: {Price}", price.Value);
         return price.Value;
     }
@@ -48,7 +50,7 @@ public class BranikPriceService : IWebScrapingService
         try
         {
             var client = _httpClientFactory.CreateClient();
-            var response = await client.GetStringAsync(_cashingConfiguration.MarketPriceUrl);
+            var response = await client.GetStringAsync(_cashingConfig.MarketPriceUrl);
             
             var doc = new HtmlDocument();
             doc.LoadHtml(response);
@@ -62,7 +64,7 @@ public class BranikPriceService : IWebScrapingService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to fetch price from {Url}", _cashingConfiguration.MarketPriceUrl);
+            _logger.LogError(ex, "Failed to fetch price from {Url}", _cashingConfig.MarketPriceUrl);
             return null;
         }
     }

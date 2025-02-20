@@ -1,5 +1,6 @@
 using BranikBot.Infrastructure.Configuration;
 using BranikBot.Infrastructure.Services;
+using BranikBot.Infrastructure.Services.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NetCord.Gateway;
@@ -29,9 +30,9 @@ public static class ServiceCollectionExtensions
 
         services.AddMemoryCache();
         services.AddHttpClient();
-        services.AddSingleton<IMessageEventHandler, BranikMessageEventHandler>();
+        services.AddSingleton<IMessageHandler, BranikMessageHandler>();
         services.AddSingleton<IWebScrapingService, BranikPriceService>();
-        services.AddHostedService<DiscordEventHandler>();
+        services.AddHostedService<DiscordService>();
         
         return services;
     }

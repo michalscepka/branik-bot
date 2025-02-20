@@ -1,20 +1,21 @@
 using System.Text;
 using BranikBot.Infrastructure.Helpers;
+using BranikBot.Infrastructure.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using NetCord.Gateway;
 
 namespace BranikBot.Infrastructure.Services;
 
-public class BranikMessageEventHandler : IMessageEventHandler
+public class BranikMessageHandler : IMessageHandler
 {
     private readonly GatewayClient _gatewayClient;
     private readonly IWebScrapingService _branikPriceService;
-    private readonly ILogger<BranikMessageEventHandler> _logger;
+    private readonly ILogger<BranikMessageHandler> _logger;
 
     private const string Prefix = "To by stačilo na";
     private const string Postfix = "Braníčka ve slevě!";
 
-    public BranikMessageEventHandler(GatewayClient gatewayClient, IWebScrapingService branikPriceService, ILogger<BranikMessageEventHandler> logger)
+    public BranikMessageHandler(GatewayClient gatewayClient, IWebScrapingService branikPriceService, ILogger<BranikMessageHandler> logger)
     {
         _gatewayClient = gatewayClient;
         _branikPriceService = branikPriceService;
@@ -28,7 +29,7 @@ public class BranikMessageEventHandler : IMessageEventHandler
 
         _logger.LogInformation("[{ChannelId}] {Username}: {Content}", message.ChannelId, message.Author.Username, message.Content);
 
-        var prices = PriceParser.ExtractPrices(message.Content);
+        var prices = message.Content.ExtractPrices();
         
         if (prices is null || prices.Count is 0)
             return;

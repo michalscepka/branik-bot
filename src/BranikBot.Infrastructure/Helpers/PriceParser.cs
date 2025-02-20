@@ -10,7 +10,7 @@ public static class PriceParser
 
     private static readonly Regex BranikRegex = new (Pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(1));
 
-    public static Dictionary<decimal, string>? ExtractPrices(string message)
+    public static Dictionary<decimal, string>? ExtractPrices(this string message)
     {
         var matches = BranikRegex.Matches(message);
         
