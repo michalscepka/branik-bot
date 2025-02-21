@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Reference Include="Microsoft.Extensions.Configuration.Json" />
+      <Reference Include="Microsoft.Extensions.Hosting">
+        <HintPath>..\..\..\..\.dotnet\shared\Microsoft.AspNetCore.App\9.0.0\Microsoft.Extensions.Hosting.dll</HintPath>
+      </Reference>
+      <Reference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\BranikBot.Infrastructure\BranikBot.Infrastructure.csproj" />
+      <ProjectReference Include="..\Logging\Logging.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="appsettings.json" CopyToPublishDirectory="Always" CopyToOutputDirectory="Always"/>
+        <None Update="appsettings.*.json" CopyToPublishDirectory="Never" CopyToOutputDirectory="PreserveNewest"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
+    </ItemGroup>
+
+</Project>

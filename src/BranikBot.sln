@@ -1,10 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BranikBot", "BranikBot\BranikBot.csproj", "{6D9A926C-D51D-43BD-94AF-84D8DD0CB95E}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "solution items", "solution items", "{B36013CC-85A2-49B6-BA40-F7EF4EFD92A7}"
 	ProjectSection(SolutionItems) = preProject
 		..\docker-compose.yaml = ..\docker-compose.yaml
+		..\docker-compose.local.yaml = ..\docker-compose.local.yaml
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BranikBot.Infrastructure", "BranikBot.Infrastructure\BranikBot.Infrastructure.csproj", "{1B8777CE-E138-42CC-9B6A-F4D99D3B4E88}"
@@ -13,16 +12,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "utils", "utils", "{29F8110C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Logging", "Logging\Logging.csproj", "{4DFC5752-B7BE-4DAA-BF06-9E979E6ECCBF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BranikBot.ConsoleApp", "BranikBot.ConsoleApp\BranikBot.ConsoleApp.csproj", "{FBC0EFEF-1C90-49A8-9D41-4A20A43BBA04}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{6D9A926C-D51D-43BD-94AF-84D8DD0CB95E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6D9A926C-D51D-43BD-94AF-84D8DD0CB95E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6D9A926C-D51D-43BD-94AF-84D8DD0CB95E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6D9A926C-D51D-43BD-94AF-84D8DD0CB95E}.Release|Any CPU.Build.0 = Release|Any CPU
 		{1B8777CE-E138-42CC-9B6A-F4D99D3B4E88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1B8777CE-E138-42CC-9B6A-F4D99D3B4E88}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1B8777CE-E138-42CC-9B6A-F4D99D3B4E88}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -31,6 +28,10 @@ Global
 		{4DFC5752-B7BE-4DAA-BF06-9E979E6ECCBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4DFC5752-B7BE-4DAA-BF06-9E979E6ECCBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4DFC5752-B7BE-4DAA-BF06-9E979E6ECCBF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FBC0EFEF-1C90-49A8-9D41-4A20A43BBA04}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FBC0EFEF-1C90-49A8-9D41-4A20A43BBA04}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FBC0EFEF-1C90-49A8-9D41-4A20A43BBA04}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FBC0EFEF-1C90-49A8-9D41-4A20A43BBA04}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{4DFC5752-B7BE-4DAA-BF06-9E979E6ECCBF} = {29F8110C-8DB2-4228-93C3-54D0CA13D3DF}

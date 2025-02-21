@@ -5,7 +5,7 @@ using Serilog.Sinks.SystemConsole.Themes;
 
 namespace Logging;
 
-public static class LoggerConfigurationExtensions
+public static class LoggerConfigurationHelper
 {
     private const string OutputTemplate = "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception:j}";
 
@@ -33,12 +33,12 @@ public static class LoggerConfigurationExtensions
 
         return loggerConfiguration.CreateBootstrapLogger();
     }
-
-    public static void SetupLogger(IConfiguration configuration, LoggerConfiguration loggerConfiguration)
+    
+    public static void SetupLoggerConfiguration(IConfiguration configuration)
     {
-        loggerConfiguration
+        Log.Logger = new LoggerConfiguration()
             .ReadFrom.Configuration(configuration)
-            .WriteTo.Async(a => a.Console(theme: AnsiConsoleTheme.Code,
-                outputTemplate: OutputTemplate));
+            .WriteTo.Async(a => a.Console(theme: AnsiConsoleTheme.Code, outputTemplate: OutputTemplate))
+            .CreateLogger();
     }
 }
