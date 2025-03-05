@@ -7,19 +7,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Reference Include="Microsoft.Extensions.Configuration.Abstractions">
-        <HintPath>..\..\..\..\Program Files\dotnet\shared\Microsoft.AspNetCore.App\9.0.1\Microsoft.Extensions.Configuration.Abstractions.dll</HintPath>
-      </Reference>
-      <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions">
-        <HintPath>..\..\..\..\Program Files\dotnet\shared\Microsoft.AspNetCore.App\9.0.1\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
-      </Reference>
-    </ItemGroup>
-
-    <ItemGroup>
       <PackageReference Include="HtmlAgilityPack" Version="1.11.72" />
       <PackageReference Include="JetBrains.Annotations" Version="2025.1.0-eap1" />
       <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.2" />
-      <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.2" />
       <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.2" />
       <PackageReference Include="NetCord.Hosting" Version="1.0.0-alpha.342" />
       <PackageReference Include="NetCord.Hosting.Services" Version="1.0.0-alpha.342" />
