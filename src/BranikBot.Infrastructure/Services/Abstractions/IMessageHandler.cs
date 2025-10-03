@@ -4,5 +4,5 @@ namespace BranikBot.Infrastructure.Services.Abstractions;
 
 public interface IMessageHandler
 {
-    ValueTask HandleMessage(Message message);
+    ValueTask ProcessIncomingMessage(Message message);
 }

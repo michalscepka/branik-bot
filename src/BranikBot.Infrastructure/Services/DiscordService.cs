@@ -21,7 +21,7 @@ public class DiscordService : BackgroundService
     protected override Task ExecuteAsync(CancellationToken cancellationToken)
     {
         _logger.LogDebug("Discord service is starting");
-        _gatewayClient.MessageCreate += _messageHandler.HandleMessage;
+        _gatewayClient.MessageCreate += _messageHandler.ProcessIncomingMessage;
         return Task.CompletedTask;
     }
 }
