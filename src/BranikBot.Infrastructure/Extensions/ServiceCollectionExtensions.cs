@@ -16,7 +16,7 @@ public static class ServiceCollectionExtensions
             .BindConfiguration(DiscordConfiguration.SectionName)
             .ValidateDataAnnotations()
             .ValidateOnStart();
-        
+
         services.AddOptions<CashingConfiguration>()
             .BindConfiguration(CashingConfiguration.SectionName)
             .ValidateDataAnnotations()
@@ -30,10 +30,10 @@ public static class ServiceCollectionExtensions
 
         services.AddMemoryCache();
         services.AddHttpClient();
-        services.AddSingleton<IMessageHandler, BranikMessageHandler>();
-        services.AddSingleton<IWebScrapingService, BranikPriceService>();
+        services.AddSingleton<IMessageHandler, MessageHandler>();
+        services.AddSingleton<IPriceService, PriceService>();
         services.AddHostedService<DiscordService>();
-        
+
         return services;
     }
 }

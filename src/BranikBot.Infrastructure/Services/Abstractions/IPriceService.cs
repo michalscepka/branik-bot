@@ -1,6 +1,6 @@
 namespace BranikBot.Infrastructure.Services.Abstractions;
 
-public interface IWebScrapingService
+public interface IPriceService
 {
     Task<decimal> GetMarketPriceAsync();
 }
