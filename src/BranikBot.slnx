@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/solution items/">
+    <File Path="../docker-compose.local.yaml" />
+    <File Path="../docker-compose.prod.yaml" />
+    <File Path="BranikBot.ConsoleApp/Dockerfile" />
+  </Folder>
+  <Folder Name="/utils/">
+    <Project Path="Logging/Logging.csproj" />
+  </Folder>
+  <Project Path="BranikBot.ConsoleApp/BranikBot.ConsoleApp.csproj" />
+  <Project Path="BranikBot.Infrastructure/BranikBot.Infrastructure.csproj" />
+</Solution>
