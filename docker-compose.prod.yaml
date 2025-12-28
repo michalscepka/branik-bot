@@ -1,10 +1,10 @@
-﻿name: branik-bot-production
+﻿name: branik-bot-prod
+
 services:
-  branikbot:
-    image: branikbot_production
+  branik-bot:
     build:
       context: ./src
       dockerfile: BranikBot.ConsoleApp/Dockerfile
-    container_name: branik_bot
+    container_name: branik-bot
     environment:
       - DOTNET_ENVIRONMENT=Production

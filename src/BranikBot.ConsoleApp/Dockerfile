@@ -1,20 +1,27 @@
-﻿FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+﻿# Use the official ASP.NET Core runtime as a parent image
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 WORKDIR /app
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-ARG BUILD_CONFIGURATION=Release
+# Build stage
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
+# Copy csproj and restore as distinct layers
 COPY ["BranikBot.ConsoleApp/BranikBot.ConsoleApp.csproj", "BranikBot.ConsoleApp/"]
 RUN dotnet restore "BranikBot.ConsoleApp/BranikBot.ConsoleApp.csproj"
+
+# Copy the entire source code
 COPY . .
+
+# Build the application
 WORKDIR "/src/BranikBot.ConsoleApp"
-RUN dotnet build "BranikBot.ConsoleApp.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "BranikBot.ConsoleApp.csproj" -c Release -o /app/build
 
+# Publish stage
 FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "BranikBot.ConsoleApp.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "BranikBot.ConsoleApp.csproj" -c Release -o /app/publish /p:UseAppHost=false /p:DebugType=None /p:DebugSymbols=false
 
+# Final stage
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
