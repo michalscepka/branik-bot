@@ -1,13 +1,15 @@
-name: Build and Deploy to Production
+name: Build and Push to DockerHub
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v*'
 
 jobs:
-  build:
+  build_and_push:
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.prep.outputs.tag }}
 
     steps:
       - name: Checkout code
@@ -27,6 +29,12 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Extract image tag
+        id: prep
+        run: |
+          TAG=${GITHUB_REF#refs/tags/v}
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
       - name: Build and push image
         uses: docker/build-push-action@v5
         with:
@@ -34,4 +42,4 @@ jobs:
           file: ./src/BranikBot.ConsoleApp/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/branik-bot:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/branik-bot:${{ steps.prep.outputs.tag }}
