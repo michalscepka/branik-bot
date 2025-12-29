@@ -42,4 +42,6 @@ jobs:
           file: ./src/BranikBot.ConsoleApp/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/branik-bot:${{ steps.prep.outputs.tag }}
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/branik-bot:${{ steps.prep.outputs.tag }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/branik-bot:latest
