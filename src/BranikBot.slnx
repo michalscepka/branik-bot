@@ -1,7 +1,7 @@
 <Solution>
   <Folder Name="/solution items/">
-    <File Path="../docker-compose.local.yaml" />
-    <File Path="../docker-compose.prod.yaml" />
+    <File Path="../docker-compose.local.yml" />
+    <File Path="../docker-compose.prod.yml" />
     <File Path="BranikBot.ConsoleApp/Dockerfile" />
   </Folder>
   <Folder Name="/utils/">
