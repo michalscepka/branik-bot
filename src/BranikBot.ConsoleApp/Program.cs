@@ -1,6 +1,5 @@
 ﻿using BranikBot.Infrastructure.Extensions;
 using BranikBot.ConsoleApp.Extensions;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 
@@ -14,13 +13,6 @@ try
 
     Log.Debug("Use Serilog");
     builder.ConfigureSerilog();
-
-    Log.Debug("Adding configuration");
-    builder.ConfigureAppConfiguration(config =>
-    {
-        config.AddJsonFile("appsettings.json", false, true);
-        config.AddJsonFile($"appsettings.{environmentName}.json", true, true);
-    });
 
     Log.Debug("Adding services");
     builder.ConfigureServices(services =>
