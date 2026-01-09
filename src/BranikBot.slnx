@@ -4,6 +4,9 @@
     <File Path="../docker-compose.prod.yml" />
     <File Path="BranikBot.ConsoleApp/Dockerfile" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="BranikBot.Tests/BranikBot.Tests.csproj" />
+  </Folder>
   <Folder Name="/utils/">
     <Project Path="Logging/Logging.csproj" />
   </Folder>
