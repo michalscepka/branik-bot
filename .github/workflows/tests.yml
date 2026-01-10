@@ -9,10 +9,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        test_project:
-          - src/BranikBot.Tests/BranikBot.Tests.csproj
 
     steps:
     - name: Checkout code
@@ -23,8 +19,15 @@ jobs:
       with:
         dotnet-version: 10.0.x
         
-    - name: Restore dependencies (${{ matrix.test_project }})
-      run: dotnet restore ${{ matrix.test_project }}
+    - name: Restore dependencies
+      run: dotnet restore src/BranikBot.Tests/BranikBot.Tests.csproj
       
-    - name: Run tests (${{ matrix.test_project }})
-      run: dotnet test ${{ matrix.test_project }} --verbosity normal --logger "trx" --results-directory ./TestResults
+    - name: Run tests
+      run: dotnet test src/BranikBot.Tests/BranikBot.Tests.csproj --verbosity normal --logger "trx" --results-directory ./TestResults
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: BranikBot.Tests.csproj
+        path: ./TestResults
