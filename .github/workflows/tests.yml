@@ -31,3 +31,4 @@ jobs:
       with:
         name: BranikBot.Tests.csproj
         path: ./TestResults
+        retention-days: 1
