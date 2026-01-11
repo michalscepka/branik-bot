@@ -49,8 +49,6 @@ public class MessageFormatter : IMessageFormatter
         if (branikCount <= 0)
             return string.Format(Messages.InsufficientFunds, parsedPrice.OriginalText);
 
-        var prefix = Messages.Prefix;
-
         var postfix = Messages.Postfix;
         if (parsedPrice.Currency is not Currency.Czk)
             postfix += string.Format(Messages.EuroExchangeRateNote, exchangeRate);
@@ -58,11 +56,11 @@ public class MessageFormatter : IMessageFormatter
         return branikCount switch
         {
             < 100 =>
-                $"{prefix} {branikCount} {branikCount.GetBottleWord()} {postfix}",
+                $"{Messages.Prefix} {branikCount} {branikCount.GetBottleWord()} {postfix}",
             < 1000 =>
-                $"{prefix} {parcelCount} {parcelCount.GetParcelWord()} ({branikCount} {branikCount.GetBottleWord()}) {postfix}",
+                $"{Messages.Prefix} {parcelCount} {parcelCount.GetParcelWord()} ({branikCount} {branikCount.GetBottleWord()}) {postfix}",
             < 100_000 =>
-                $"{prefix} {palletsCount} {palletsCount.GetPalletWord()} ({parcelCount} {parcelCount.GetParcelWord()}) {branikCount.GetBottleWord()} {postfix}",
+                $"{Messages.Prefix} {palletsCount} {palletsCount.GetPalletWord()} ({parcelCount} {parcelCount.GetParcelWord()}) {branikCount.GetBottleWord()} {postfix}",
             _ =>
                 Messages.TooRich
         };
