@@ -4,5 +4,5 @@
     container_name: branik-bot
     environment:
       - DOTNET_ENVIRONMENT=Production
-      - Discord__Token=${DISCORD_BOT_TOKEN}
+      - Discord__BotToken=${DISCORD_BOT_TOKEN}
     restart: unless-stopped

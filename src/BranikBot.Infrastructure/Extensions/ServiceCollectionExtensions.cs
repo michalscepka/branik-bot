@@ -17,21 +17,28 @@ public static class ServiceCollectionExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        services.AddOptions<CashingConfiguration>()
-            .BindConfiguration(CashingConfiguration.SectionName)
+        services.AddOptions<MarketConfiguration>()
+            .BindConfiguration(MarketConfiguration.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<ExchangeRateConfiguration>()
+            .BindConfiguration(ExchangeRateConfiguration.SectionName)
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
         services.AddDiscordGateway((opt, sp) =>
         {
-            opt.Token = sp.GetRequiredService<IOptions<DiscordConfiguration>>().Value.Token;
+            opt.Token = sp.GetRequiredService<IOptions<DiscordConfiguration>>().Value.BotToken;
             opt.Intents = GatewayIntents.GuildMessages | GatewayIntents.MessageContent;
         });
 
         services.AddMemoryCache();
         services.AddHttpClient();
         services.AddSingleton<IMessageHandler, MessageHandler>();
-        services.AddSingleton<IPriceService, PriceService>();
+        services.AddSingleton<IPriceService, AkcniCenyService>();
+        services.AddSingleton<IExchangeRateService, CnbExchangeRateService>();
+        services.AddSingleton<IMessageFormatter, MessageFormatter>();
         services.AddHostedService<DiscordService>();
 
         return services;

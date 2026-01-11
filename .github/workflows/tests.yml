@@ -1,0 +1,34 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.0.x
+        
+    - name: Restore dependencies
+      run: dotnet restore src/BranikBot.Tests/BranikBot.Tests.csproj
+      
+    - name: Run tests
+      run: dotnet test src/BranikBot.Tests/BranikBot.Tests.csproj --verbosity normal --logger "trx" --results-directory ./TestResults
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: BranikBot.Tests.csproj
+        path: ./TestResults
+        retention-days: 1

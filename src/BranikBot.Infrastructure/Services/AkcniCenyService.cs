@@ -8,26 +8,29 @@ using Microsoft.Extensions.Options;
 
 namespace BranikBot.Infrastructure.Services;
 
-public class PriceService : IPriceService
+public class AkcniCenyService : IPriceService
 {
     private readonly IMemoryCache _cache;
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly ILogger<PriceService> _logger;
-    private readonly CashingConfiguration _cashingConfig;
+    private readonly ILogger<AkcniCenyService> _logger;
+    private readonly MarketConfiguration _configuration;
 
-    private const string CacheKey = "BranikPrice";
+    private const string CacheKey = "BranikPrice_";
     private const decimal DefaultMarketPrice = 45m;
 
-    public PriceService(IMemoryCache cache, IHttpClientFactory httpClientFactory,
-        ILogger<PriceService> logger, IOptions<CashingConfiguration> cashingConfiguration)
+    public AkcniCenyService(
+        IMemoryCache cache,
+        IHttpClientFactory httpClientFactory,
+        ILogger<AkcniCenyService> logger,
+        IOptions<MarketConfiguration> configuration)
     {
         _cache = cache;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
-        _cashingConfig = cashingConfiguration.Value;
+        _configuration = configuration.Value;
     }
 
-    public async Task<decimal> GetMarketPriceAsync()
+    public async Task<decimal> GetPriceAsync()
     {
         if (_cache.TryGetValue(CacheKey, out decimal cachedPrice))
         {
@@ -40,7 +43,7 @@ public class PriceService : IPriceService
         if (!price.HasValue)
             return DefaultMarketPrice;
 
-        _cache.Set(CacheKey, price.Value, _cashingConfig.DurationMinutes);
+        _cache.Set(CacheKey, price.Value, _configuration.CacheDuration);
         _logger.LogInformation("Fetched and cached new price: {Price}", price.Value);
         return price.Value;
     }
@@ -50,7 +53,7 @@ public class PriceService : IPriceService
         try
         {
             var client = _httpClientFactory.CreateClient();
-            var response = await client.GetStringAsync(_cashingConfig.MarketPriceUrl);
+            var response = await client.GetStringAsync(_configuration.Url);
 
             var doc = new HtmlDocument();
             doc.LoadHtml(response);
@@ -64,7 +67,7 @@ public class PriceService : IPriceService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to fetch price from {Url}", _cashingConfig.MarketPriceUrl);
+            _logger.LogError(ex, "Failed to fetch price from {Url}", _configuration.Url);
             return null;
         }
     }
