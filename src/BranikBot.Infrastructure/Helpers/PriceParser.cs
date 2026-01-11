@@ -8,28 +8,28 @@ namespace BranikBot.Infrastructure.Helpers;
 public static class PriceParser
 {
     private const string NumberPattern = @"\d{1,3}(\s?\d{3})*([.,]\d+)?";
-    private const string CzkSuffixPattern = @"kc|kč|czk|korun|koruny|koruna";
-    private const string EurSuffixPattern = @"eur|euro|eura";
-    private const string SeparatorPattern = @",-";
+    private const string CurrencySuffix = "CurrencySuffix";
+    private const string Base = "Base";
+    private const string Thousands = "Thousands";
+    private const string Millions = "Millions";
 
-    private const string Pattern =
+    private static readonly Dictionary<Currency, string[]> CurrencyDefinitions = new()
+    {
+        { Currency.Eur, ["eur", "euro", "eura", "€"] },
+        { Currency.Czk, ["kc", "kč", "czk", "korun", "koruny", "koruna", ",-"] }
+    };
+
+    private static readonly string CurrencySuffixPattern =
+        string.Join("|", CurrencyDefinitions.Values
+            .SelectMany(v => v)
+            .OrderByDescending(v => v.Length)
+            .Select(Regex.Escape));
+
+    private static readonly string Pattern =
         $"""
-                 (?<Ones> {NumberPattern} )          # Match number (Ones group)
-                 \s*                                 # Optional whitespace
-                 (?<CurrencySuffix>                  # Start Currency Suffix group
-                     (
-                         ({CzkSuffixPattern}|{EurSuffixPattern}) # Word-based suffixes
-                         \b                          # Word boundary
-                     )
-                     | €                             # Euro symbol
-                     | {SeparatorPattern}            # Or separator ',-'
-                 )
-                 |                                   # OR
-                 (?<Thousands> {NumberPattern} )     # Match number (Thousands group)
-                 \s* k \b                            # 'k' suffix
-                 |                                   # OR
-                 (?<Millions> {NumberPattern} )      # Match number (Millions group)
-                 \s* mega \b                         # 'mega' suffix
+         (?<{Base}>{NumberPattern})\s*(?<{CurrencySuffix}>{CurrencySuffixPattern})|
+         (?<{Thousands}>{NumberPattern})\s*k\b(\s*(?<{CurrencySuffix}>{CurrencySuffixPattern}))?|
+         (?<{Millions}>{NumberPattern})\s*mega\b(\s*(?<{CurrencySuffix}>{CurrencySuffixPattern}))?
          """;
 
     private static readonly Regex BranikRegex = new(
@@ -40,8 +40,7 @@ public static class PriceParser
     public static IEnumerable<ParsedPrice> ExtractPrices(this string message)
     {
         var matches = BranikRegex.Matches(message);
-
-        var result = new List<ParsedPrice>();
+        var result = new HashSet<ParsedPrice>();
 
         if (matches.Count is 0)
             return result;
@@ -49,35 +48,46 @@ public static class PriceParser
         foreach (Match match in matches)
         {
             var originalValue = match.Groups[0].Value;
-            decimal? value = null;
-            var currency = Currency.Czk;
+            var currency = GetCurrencyFromSuffix(match.Groups[CurrencySuffix].Value);
 
-            if (match.Groups[nameof(PriceGroup.Ones)].Success)
-            {
-                value = ParseDecimal(match.Groups[nameof(PriceGroup.Ones)].Value);
-                var suffix = match.Groups["CurrencySuffix"].Value;
-                if (suffix.Contains("eur", StringComparison.OrdinalIgnoreCase) || suffix.Contains("€"))
-                    currency = Currency.Eur;
-            }
+            var amount = TryGetAmount(Base, 1, match) ??
+                        TryGetAmount(Thousands, 1_000, match) ??
+                        TryGetAmount(Millions, 1_000_000, match);
 
-            if (match.Groups[nameof(PriceGroup.Thousands)].Success)
-                value = ParseDecimal(match.Groups[nameof(PriceGroup.Thousands)].Value) * 1_000;
-
-            if (match.Groups[nameof(PriceGroup.Millions)].Success)
-                value = ParseDecimal(match.Groups[nameof(PriceGroup.Millions)].Value) * 1_000_000;
-
-            if (value.HasValue)
-                // Deduplicate based on Value and Currency
-                if (!result.Any(p => p.Value == value.Value && p.Currency == currency))
-                    result.Add(new ParsedPrice(value.Value, currency, originalValue));
+            if (amount.HasValue)
+                result.Add(new ParsedPrice(amount.Value, currency, originalValue));
         }
 
         return result;
     }
 
-    private static decimal ParseDecimal(string value)
+    private static decimal? TryGetAmount(string groupName, decimal multiplier, Match match)
+    {
+        return match.Groups[groupName].Success &&
+               TryParseDecimal(match.Groups[groupName].Value, out var val)
+            ? val * multiplier
+            : null;
+    }
+
+    private static Currency GetCurrencyFromSuffix(string suffix)
+    {
+        if (string.IsNullOrWhiteSpace(suffix))
+            return Currency.Czk;
+
+        var normalizedSuffix = suffix.Trim();
+
+        foreach (var (currency, patterns) in CurrencyDefinitions)
+        {
+            if (patterns.Any(p => string.Equals(p, normalizedSuffix, StringComparison.OrdinalIgnoreCase)))
+                return currency;
+        }
+
+        return Currency.Czk;
+    }
+
+    private static bool TryParseDecimal(string value, out decimal result)
     {
         var normalized = value.Replace(" ", "").Replace(",", ".");
-        return decimal.Parse(normalized, CultureInfo.InvariantCulture);
+        return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out result);
     }
 }

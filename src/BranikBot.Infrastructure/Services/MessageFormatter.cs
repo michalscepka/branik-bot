@@ -34,7 +34,7 @@ public class MessageFormatter : IMessageFormatter
 
             var exchangeRate = exchangeRateTasks[parsedPrice.Currency].Result;
 
-            var valueInCzk = parsedPrice.Value * exchangeRate;
+            var valueInCzk = parsedPrice.Amount * exchangeRate;
             result.AppendLine(CreateMessageLine(parsedPrice, valueInCzk, marketPrice, exchangeRate));
             result.AppendLine();
         }
