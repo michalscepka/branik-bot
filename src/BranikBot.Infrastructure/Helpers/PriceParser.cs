@@ -7,10 +7,35 @@ namespace BranikBot.Infrastructure.Helpers;
 
 public static class PriceParser
 {
-    private const string Pattern =
-        @"(?<Ones>\d{1,3}(\s?\d{3})*([.,]\d+)?)\s*(?<CurrencySuffix>((kc|kč|czk|korun|koruny|koruna|eur|euro|eura)\b)|€|,-)|(?<Thousands>\d{1,3}(\s?\d{3})*([.,]\d+)?)\s*k\b|(?<Millions>\d{1,3}(\s?\d{3})*([.,]\d+)?)\s*mega\b";
+    private const string NumberPattern = @"\d{1,3}(\s?\d{3})*([.,]\d+)?";
+    private const string CzkSuffixPattern = @"kc|kč|czk|korun|koruny|koruna";
+    private const string EurSuffixPattern = @"eur|euro|eura";
+    private const string SeparatorPattern = @",-";
 
-    private static readonly Regex BranikRegex = new (Pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(1));
+    private const string Pattern =
+        $"""
+                 (?<Ones> {NumberPattern} )          # Match number (Ones group)
+                 \s*                                 # Optional whitespace
+                 (?<CurrencySuffix>                  # Start Currency Suffix group
+                     (
+                         ({CzkSuffixPattern}|{EurSuffixPattern}) # Word-based suffixes
+                         \b                          # Word boundary
+                     )
+                     | €                             # Euro symbol
+                     | {SeparatorPattern}            # Or separator ',-'
+                 )
+                 |                                   # OR
+                 (?<Thousands> {NumberPattern} )     # Match number (Thousands group)
+                 \s* k \b                            # 'k' suffix
+                 |                                   # OR
+                 (?<Millions> {NumberPattern} )      # Match number (Millions group)
+                 \s* mega \b                         # 'mega' suffix
+         """;
+
+    private static readonly Regex BranikRegex = new(
+        Pattern,
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace,
+        TimeSpan.FromSeconds(1));
 
     public static IEnumerable<ParsedPrice> ExtractPrices(this string message)
     {
@@ -32,9 +57,7 @@ public static class PriceParser
                 value = ParseDecimal(match.Groups[nameof(PriceGroup.Ones)].Value);
                 var suffix = match.Groups["CurrencySuffix"].Value;
                 if (suffix.Contains("eur", StringComparison.OrdinalIgnoreCase) || suffix.Contains("€"))
-                {
                     currency = Currency.Eur;
-                }
             }
 
             if (match.Groups[nameof(PriceGroup.Thousands)].Success)
@@ -44,13 +67,9 @@ public static class PriceParser
                 value = ParseDecimal(match.Groups[nameof(PriceGroup.Millions)].Value) * 1_000_000;
 
             if (value.HasValue)
-            {
                 // Deduplicate based on Value and Currency
                 if (!result.Any(p => p.Value == value.Value && p.Currency == currency))
-                {
                     result.Add(new ParsedPrice(value.Value, currency, originalValue));
-                }
-            }
         }
 
         return result;
