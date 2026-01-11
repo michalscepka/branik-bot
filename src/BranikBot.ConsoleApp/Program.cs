@@ -2,9 +2,14 @@
 using BranikBot.ConsoleApp.Extensions;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using System.Globalization;
 
 try
 {
+    var cultureInfo = new CultureInfo("cs-CZ");
+    CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
+    CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
+
     var environmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? Logging.Environments.Production;
     Log.Logger = Logging.LoggerConfigurationHelper.ConfigureMinimalLogging(environmentName);
 
