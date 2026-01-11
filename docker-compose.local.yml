@@ -8,4 +8,4 @@ services:
     container_name: branik-bot-local
     environment:
       - DOTNET_ENVIRONMENT=Development
-      - Discord__Token=<BOT_TOKEN>
+      - Discord__BotToken=<BOT_TOKEN>

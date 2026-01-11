@@ -8,5 +8,8 @@ public class DiscordConfiguration
     public const string SectionName = "Discord";
 
     [Required]
-    public string Token { get; [UsedImplicitly] set; } = null!;
+    public string BotToken { get; [UsedImplicitly] set; } = null!;
+
+    [Required]
+    public TimeSpan ChannelCooldown { get; [UsedImplicitly] set; }
 }

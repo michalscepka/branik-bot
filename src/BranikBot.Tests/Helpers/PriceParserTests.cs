@@ -1,9 +1,26 @@
 using BranikBot.Infrastructure.Helpers;
+using BranikBot.Infrastructure.Enums;
 
 namespace BranikBot.Tests.Helpers;
 
 public class PriceParserTests
 {
+    [Theory]
+    [InlineData("100 eur", 100)]
+    [InlineData("100 EUR", 100)]
+    [InlineData("100 euro", 100)]
+    [InlineData("100 €", 100)]
+    [InlineData("20.5 eur", 20.5)]
+    public void ExtractPrices_EuroPrices_ReturnsCorrectCurrency(string input, decimal expectedValue)
+    {
+        var result = input.ExtractPrices();
+
+        Assert.Single(result);
+        var price = result.First();
+        Assert.Equal(expectedValue, price.Value);
+        Assert.Equal(Currency.Eur, price.Currency);
+    }
+
     [Theory]
     [InlineData("100 kc", 100)]
     [InlineData("100kc", 100)]
@@ -22,7 +39,7 @@ public class PriceParserTests
         var result = input.ExtractPrices();
 
         Assert.Single(result);
-        Assert.Equal(expectedValue, result.Keys.First());
+        Assert.Equal(expectedValue, result.First().Value);
     }
 
     [Theory]
@@ -32,7 +49,19 @@ public class PriceParserTests
     {
          var result = input.ExtractPrices();
 
-         Assert.Equal(expectedValue, result.Keys.First());
+         Assert.Equal(expectedValue, result.First().Value);
+    }
+
+    [Fact]
+    public void ExtractPrices_MultiplePrices_ReturnsAll()
+    {
+        var input = "It costs 100 kc and 2k for shipping.";
+
+        var result = input.ExtractPrices();
+
+        Assert.Equal(2, result.Count());
+        Assert.Contains(result, p => p.Value == 100m);
+        Assert.Contains(result, p => p.Value == 2000m);
     }
 
     [Fact]
@@ -51,7 +80,7 @@ public class PriceParserTests
     public void ExtractPrices_InvalidFormat_ReturnsEmpty(string input, int expectedCount)
     {
          var result = input.ExtractPrices();
-         Assert.Equal(expectedCount, result.Count);
+         Assert.Equal(expectedCount, result.Count());
     }
 
     [Theory]
@@ -64,20 +93,20 @@ public class PriceParserTests
     [InlineData("Ahoj, prodám iPhone 15 za 25 000,-. Je to super cena.", 25000)]
     [InlineData("Na účtě mám 0,05 mega.", 50000)]
     [InlineData("Dlužím ti 1000czk.", 1000)]
-    public void ExtractPrices_Sentences_ContainsExpectedPrice(string input, decimal expectedPrice)
+    public void ExtractPrices_RealLifeSentences_ContainsExpectedPrice(string input, decimal expectedPrice)
     {
         var result = input.ExtractPrices();
-        Assert.True(result.ContainsKey(expectedPrice), $"Expected price {expectedPrice} not found in result.");
+        Assert.Contains(result, p => p.Value == expectedPrice);
     }
 
     [Fact]
-    public void ExtractPrices_MultiplePrices_ReturnsMultiplePrices()
+    public void ExtractPrices_ComplexSentence_ReturnsMultiplePrices()
     {
         var input = "Dám ti 5k a ty mi vrátíš 200 kč, platí?";
         var result = input.ExtractPrices();
 
-        Assert.Equal(2, result.Count);
-        Assert.True(result.ContainsKey(5000));
-        Assert.True(result.ContainsKey(200));
+        Assert.Equal(2, result.Count());
+        Assert.Contains(result, p => p.Value == 5000);
+        Assert.Contains(result, p => p.Value == 200);
     }
 }

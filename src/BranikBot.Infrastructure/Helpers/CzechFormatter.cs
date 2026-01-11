@@ -22,11 +22,4 @@ public static class CzechFormatter
         >= 2 and <= 4 => "europalety",
         _ => "europalet"
     };
-
-    public static string GetTruckWord(this int count) => count switch
-    {
-        1 => "kamion",
-        >= 2 and <= 4 => "kamiony",
-        _ => "kamionu"
-    };
 }
