@@ -1,4 +1,4 @@
-using Logging;
+using BranikBot.Infrastructure.Logging.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;

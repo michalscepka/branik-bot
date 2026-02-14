@@ -1,8 +1,8 @@
 using System.Globalization;
 using System.Xml.Linq;
 using BranikBot.Infrastructure.Configuration;
-using BranikBot.Infrastructure.Enums;
-using BranikBot.Infrastructure.Services.Abstractions;
+using BranikBot.Domain.Enums;
+using BranikBot.Application.Services;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

@@ -1,6 +1,6 @@
 using System.Globalization;
+using BranikBot.Application.Services;
 using BranikBot.Infrastructure.Configuration;
-using BranikBot.Infrastructure.Services.Abstractions;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;

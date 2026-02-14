@@ -1,9 +1,9 @@
 using System.Text;
-using BranikBot.Infrastructure.Enums;
-using BranikBot.Infrastructure.Helpers;
-using BranikBot.Infrastructure.Models;
-using BranikBot.Infrastructure.Resources;
-using BranikBot.Infrastructure.Services.Abstractions;
+using BranikBot.Application.Resources;
+using BranikBot.Application.Services;
+using BranikBot.Domain.Enums;
+using BranikBot.Domain.Models;
+using BranikBot.Domain.Services;
 
 namespace BranikBot.Infrastructure.Services;
 

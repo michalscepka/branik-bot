@@ -9,8 +9,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\BranikBot.Infrastructure\BranikBot.Infrastructure.csproj" />
-      <ProjectReference Include="..\Logging\Logging.csproj" />
+        <ProjectReference Include="..\BranikBot.Infrastructure\BranikBot.Infrastructure.csproj"/>
+        <ProjectReference Include="..\BranikBot.Application\BranikBot.Application.csproj"/>
+        <ProjectReference Include="..\BranikBot.Domain\BranikBot.Domain.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -19,9 +20,9 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Content Include="..\.dockerignore">
-        <Link>.dockerignore</Link>
-      </Content>
+        <Content Include="..\.dockerignore">
+            <Link>.dockerignore</Link>
+        </Content>
     </ItemGroup>
 
 </Project>

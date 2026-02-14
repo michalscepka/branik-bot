@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
-using BranikBot.Infrastructure.Enums;
-using BranikBot.Infrastructure.Models;
+using BranikBot.Domain.Enums;
+using BranikBot.Domain.Models;
 
-namespace BranikBot.Infrastructure.Helpers;
+namespace BranikBot.Domain.Services;
 
 public static class PriceParser
 {
@@ -51,8 +51,8 @@ public static class PriceParser
             var currency = GetCurrencyFromSuffix(match.Groups[CurrencySuffix].Value);
 
             var amount = TryGetAmount(Base, 1, match) ??
-                        TryGetAmount(Thousands, 1_000, match) ??
-                        TryGetAmount(Millions, 1_000_000, match);
+                         TryGetAmount(Thousands, 1_000, match) ??
+                         TryGetAmount(Millions, 1_000_000, match);
 
             if (amount.HasValue)
                 result.Add(new ParsedPrice(amount.Value, currency, originalValue));

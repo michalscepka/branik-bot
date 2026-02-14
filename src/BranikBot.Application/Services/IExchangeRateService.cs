@@ -1,6 +1,6 @@
-using BranikBot.Infrastructure.Enums;
+using BranikBot.Domain.Enums;
 
-namespace BranikBot.Infrastructure.Services.Abstractions;
+namespace BranikBot.Application.Services;
 
 public interface IExchangeRateService
 {

@@ -1,4 +1,4 @@
-namespace BranikBot.Infrastructure.Enums;
+namespace BranikBot.Domain.Enums;
 
 public enum Currency
 {

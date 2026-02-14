@@ -3,6 +3,7 @@ using BranikBot.ConsoleApp.Extensions;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using System.Globalization;
+using BranikBot.Infrastructure.Logging.Extensions;
 
 try
 {
@@ -10,8 +11,8 @@ try
     CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
     CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
-    var environmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? Logging.Environments.Production;
-    Log.Logger = Logging.LoggerConfigurationHelper.ConfigureMinimalLogging(environmentName);
+    var environmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? Environments.Production;
+    Log.Logger = LoggerConfigurationHelper.ConfigureMinimalLogging(environmentName);
 
     Log.Information("Starting web host on {env} environment.", environmentName);
     var builder = Host.CreateDefaultBuilder(args);

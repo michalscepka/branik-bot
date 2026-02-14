@@ -1,5 +1,5 @@
-using BranikBot.Infrastructure.Enums;
+using BranikBot.Domain.Enums;
 
-namespace BranikBot.Infrastructure.Models;
+namespace BranikBot.Domain.Models;
 
 public record ParsedPrice(decimal Amount, Currency Currency, string OriginalText);

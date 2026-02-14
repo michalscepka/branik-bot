@@ -1,6 +1,6 @@
 using BranikBot.Infrastructure.Configuration;
 using BranikBot.Infrastructure.Services;
-using BranikBot.Infrastructure.Services.Abstractions;
+using BranikBot.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NetCord.Gateway;

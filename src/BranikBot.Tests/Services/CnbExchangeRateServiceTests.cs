@@ -1,6 +1,6 @@
 using System.Net;
 using BranikBot.Infrastructure.Configuration;
-using BranikBot.Infrastructure.Enums;
+using BranikBot.Domain.Enums;
 using BranikBot.Infrastructure.Services;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;

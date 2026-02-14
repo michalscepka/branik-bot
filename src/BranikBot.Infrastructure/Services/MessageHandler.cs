@@ -1,6 +1,6 @@
 using BranikBot.Infrastructure.Configuration;
-using BranikBot.Infrastructure.Helpers;
-using BranikBot.Infrastructure.Services.Abstractions;
+using BranikBot.Domain.Services;
+using BranikBot.Application.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NetCord.Gateway;
@@ -39,7 +39,8 @@ public class MessageHandler : IMessageHandler
 
         try
         {
-            _logger.LogInformation("[{ChannelId}] {Username}: {Content}", message.ChannelId, message.Author.Username, message.Content);
+            _logger.LogInformation("[{ChannelId}] {Username}: {Content}", message.ChannelId, message.Author.Username,
+                message.Content);
 
             var prices = message.Content.ExtractPrices().ToList();
             if (prices.Count is 0)

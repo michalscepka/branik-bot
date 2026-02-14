@@ -1,4 +1,4 @@
-namespace BranikBot.Infrastructure.Helpers;
+namespace BranikBot.Domain.Services;
 
 public static class CzechFormatter
 {

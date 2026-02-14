@@ -1,5 +1,6 @@
-using BranikBot.Infrastructure.Helpers;
-using BranikBot.Infrastructure.Enums;
+using BranikBot.Domain.Services;
+using BranikBot.Domain.Enums;
+using BranikBot.Domain.Models;
 
 namespace BranikBot.Tests.Helpers;
 

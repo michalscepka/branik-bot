@@ -1,4 +1,4 @@
-namespace BranikBot.Infrastructure.Resources;
+namespace BranikBot.Application.Resources;
 
 public static class Messages
 {

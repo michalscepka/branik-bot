@@ -1,6 +1,6 @@
-using BranikBot.Infrastructure.Models;
+using BranikBot.Domain.Models;
 
-namespace BranikBot.Infrastructure.Services.Abstractions;
+namespace BranikBot.Application.Services;
 
 public interface IMessageFormatter
 {
