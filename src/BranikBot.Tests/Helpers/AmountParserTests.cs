@@ -1,10 +1,12 @@
 using BranikBot.Domain.Services;
 using BranikBot.Domain.Enums;
 using BranikBot.Domain.Models;
+using BranikBot.Infrastructure.Helpers;
+using BranikBot.Infrastructure.Services;
 
 namespace BranikBot.Tests.Helpers;
 
-public class PriceParserTests
+public class AmountParserTests
 {
     [Theory]
     // Euro variations
@@ -39,7 +41,7 @@ public class PriceParserTests
     [InlineData("1.2 mega eura", 1200000, Currency.Eur)]
     public void ExtractPrices_ValidSingleInput_ReturnsCorrectResult(string input, decimal expectedAmount, Currency expectedCurrency)
     {
-        var result = input.ExtractPrices();
+        var result = input.ExtractAmounts();
 
         Assert.Single(result);
         var price = result.First();
@@ -53,7 +55,7 @@ public class PriceParserTests
     {
         var input = "It costs 100 kc and 2k for shipping.";
 
-        var result = input.ExtractPrices();
+        var result = input.ExtractAmounts();
 
         Assert.Equal(2, result.Count());
         Assert.Contains(result, p => p.Amount == 100m && p.Currency == Currency.Czk);
@@ -65,7 +67,7 @@ public class PriceParserTests
     {
         var input = "This is a random text without price.";
 
-        var result = input.ExtractPrices();
+        var result = input.ExtractAmounts();
 
         Assert.Empty(result);
     }
@@ -78,7 +80,7 @@ public class PriceParserTests
     [InlineData("   ")]
     public void ExtractPrices_InvalidFormat_ReturnsEmpty(string input)
     {
-         var result = input.ExtractPrices();
+         var result = input.ExtractAmounts();
          Assert.Empty(result);
     }
 
@@ -94,7 +96,7 @@ public class PriceParserTests
     [InlineData("Dlužím ti 1000czk.", 1000)]
     public void ExtractPrices_RealWorldSentences_FindsExpectedPrice(string input, decimal expectedPrice)
     {
-        var result = input.ExtractPrices();
+        var result = input.ExtractAmounts();
         Assert.Contains(result, p => p.Amount == expectedPrice);
     }
 
@@ -102,7 +104,7 @@ public class PriceParserTests
     public void ExtractPrices_ComplexSentence_ReturnsMultiplePrices()
     {
         var input = "Dám ti 5k a ty mi vrátíš 200 kč, platí?";
-        var result = input.ExtractPrices();
+        var result = input.ExtractAmounts();
 
         Assert.Equal(2, result.Count());
         Assert.Contains(result, p => p.Amount == 5000 && p.Currency == Currency.Czk);

@@ -4,5 +4,5 @@ namespace BranikBot.Application.Services;
 
 public interface IExchangeRateService
 {
-    Task<decimal> GetExchangeRateAsync(Currency currency);
+    ValueTask<decimal> GetExchangeRateAsync(Currency currency);
 }

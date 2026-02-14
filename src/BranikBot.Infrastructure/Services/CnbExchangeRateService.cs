@@ -9,85 +9,64 @@ using Microsoft.Extensions.Options;
 
 namespace BranikBot.Infrastructure.Services;
 
-public class CnbExchangeRateService : IExchangeRateService
+public class CnbExchangeRateService(
+    IHttpClientFactory httpClientFactory,
+    IMemoryCache cache,
+    IOptions<ExchangeRateConfiguration> configuration,
+    ILogger<CnbExchangeRateService> logger) : IExchangeRateService
 {
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IMemoryCache _cache;
-    private readonly ILogger<CnbExchangeRateService> _logger;
-    private readonly ExchangeRateConfiguration _configuration;
+    private readonly ExchangeRateConfiguration _configuration = configuration.Value;
 
     private const string CacheKeyPrefix = "ExchangeRate_";
 
-    public CnbExchangeRateService(
-        IHttpClientFactory httpClientFactory,
-        IMemoryCache cache,
-        IOptions<ExchangeRateConfiguration> configuration,
-        ILogger<CnbExchangeRateService> logger)
-    {
-        _httpClientFactory = httpClientFactory;
-        _cache = cache;
-        _logger = logger;
-        _configuration = configuration.Value;
-    }
-
-    public async Task<decimal> GetExchangeRateAsync(Currency currency)
+    public async ValueTask<decimal> GetExchangeRateAsync(Currency currency)
     {
         if (currency is Currency.Czk)
             return 1m;
 
         var cacheKey = $"{CacheKeyPrefix}{currency}";
 
-        if (_cache.TryGetValue(cacheKey, out decimal cachedRate))
-            return cachedRate;
-
-        try
+        return await cache.GetOrCreateAsync(cacheKey, async entry =>
         {
-            var rates = await FetchExchangeRatesAsync();
+            entry.AbsoluteExpirationRelativeToNow = _configuration.CacheDuration;
 
-            if (rates.TryGetValue(currency, out var rate))
-            {
-                _cache.Set(cacheKey, rate, _configuration.CacheDuration);
-                return rate;
-            }
-
-            _logger.LogWarning("Exchange rate for {Currency} not found in CNB data.", currency);
-            throw new InvalidOperationException($"Exchange rate for {currency} not found.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to fetch exchange rate for {Currency}.", currency);
-            throw;
-        }
+            return await FetchExchangeRateAsync();
+        });
     }
 
-    private async Task<Dictionary<Currency, decimal>> FetchExchangeRatesAsync()
+    private async Task<decimal> FetchExchangeRateAsync()
     {
-        var client = _httpClientFactory.CreateClient();
-        var response = await client.GetStringAsync(_configuration.Url);
-        var doc = XDocument.Parse(response);
-
-        var result = new Dictionary<Currency, decimal>();
-
-        var rows = doc.Descendants("radek");
-        foreach (var row in rows)
+        try
         {
-            var code = row.Attribute("kod")?.Value;
-            var rateStr = row.Attribute("kurz")?.Value;
-            var amountStr = row.Attribute("mnozstvi")?.Value;
+            var client = httpClientFactory.CreateClient();
+            var response = await client.GetStringAsync(_configuration.Url);
+            var doc = XDocument.Parse(response);
 
-            if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(rateStr) || string.IsNullOrEmpty(amountStr))
-                continue;
-
-            if (!Enum.TryParse(code, true, out Currency currency))
-                continue;
-
-            if (decimal.TryParse(rateStr, NumberStyles.Number, new CultureInfo("cs-CZ"), out var rate) &&
-                decimal.TryParse(amountStr, out var amount))
+            var rows = doc.Descendants("radek");
+            foreach (var row in rows)
             {
-                result[currency] = rate / amount;
+                var code = row.Attribute("kod")?.Value;
+                var rateStr = row.Attribute("kurz")?.Value;
+                var amountStr = row.Attribute("mnozstvi")?.Value;
+
+                if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(rateStr) || string.IsNullOrEmpty(amountStr))
+                    continue;
+
+                if (!code.Equals(nameof(Currency.Eur), StringComparison.InvariantCultureIgnoreCase))
+                    continue;
+
+                if (decimal.TryParse(rateStr, NumberStyles.Number, new CultureInfo("cs-CZ"), out var rate) &&
+                    decimal.TryParse(amountStr, out var amount))
+                {
+                    return rate / amount;
+                }
             }
         }
+        catch (HttpRequestException ex)
+        {
+            logger.LogError(ex, "Failed to fetch exchange rate from {Url}", _configuration.Url);
+        }
 
-        return result;
+        return 0m;
     }
 }

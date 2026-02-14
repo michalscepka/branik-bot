@@ -1,6 +1,8 @@
 using BranikBot.Infrastructure.Configuration;
 using BranikBot.Infrastructure.Services;
 using BranikBot.Application.Services;
+using BranikBot.Infrastructure.Formatting;
+using BranikBot.Infrastructure.Services.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NetCord.Gateway;
@@ -39,7 +41,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPriceService, AkcniCenyService>();
         services.AddSingleton<IExchangeRateService, CnbExchangeRateService>();
         services.AddSingleton<IMessageFormatter, MessageFormatter>();
-        services.AddHostedService<DiscordService>();
+        services.AddHostedService<DiscordBackgroundService>();
 
         return services;
     }

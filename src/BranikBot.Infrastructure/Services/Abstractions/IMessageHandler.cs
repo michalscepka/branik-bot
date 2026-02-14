@@ -1,6 +1,6 @@
 using NetCord.Gateway;
 
-namespace BranikBot.Infrastructure.Services;
+namespace BranikBot.Infrastructure.Services.Abstractions;
 
 public interface IMessageHandler
 {

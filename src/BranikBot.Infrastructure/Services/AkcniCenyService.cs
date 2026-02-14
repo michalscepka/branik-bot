@@ -8,51 +8,36 @@ using Microsoft.Extensions.Options;
 
 namespace BranikBot.Infrastructure.Services;
 
-public class AkcniCenyService : IPriceService
+public class AkcniCenyService(
+    IMemoryCache cache,
+    IHttpClientFactory httpClientFactory,
+    ILogger<AkcniCenyService> logger,
+    IOptions<MarketConfiguration> configuration) : IPriceService
 {
-    private readonly IMemoryCache _cache;
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly ILogger<AkcniCenyService> _logger;
-    private readonly MarketConfiguration _configuration;
+    private readonly MarketConfiguration _configuration = configuration.Value;
 
     private const string CacheKey = "BranikPrice_";
-    private const decimal DefaultMarketPrice = 45m;
+    private const decimal FallbackMarketPrice = 45m;
 
-    public AkcniCenyService(
-        IMemoryCache cache,
-        IHttpClientFactory httpClientFactory,
-        ILogger<AkcniCenyService> logger,
-        IOptions<MarketConfiguration> configuration)
+    public async ValueTask<decimal> GetPriceAsync()
     {
-        _cache = cache;
-        _httpClientFactory = httpClientFactory;
-        _logger = logger;
-        _configuration = configuration.Value;
-    }
-
-    public async Task<decimal> GetPriceAsync()
-    {
-        if (_cache.TryGetValue(CacheKey, out decimal cachedPrice))
+        return await cache.GetOrCreateAsync(CacheKey, async entry =>
         {
-            _logger.LogInformation("Returning cached price: {Price}", cachedPrice);
-            return cachedPrice;
-        }
+            entry.AbsoluteExpirationRelativeToNow = _configuration.CacheDuration;
 
-        var price = await FetchBranikPriceAsync();
+            var price = await FetchBranikPriceAsync();
+            var finalPrice = price ?? FallbackMarketPrice;
 
-        if (!price.HasValue)
-            return DefaultMarketPrice;
-
-        _cache.Set(CacheKey, price.Value, _configuration.CacheDuration);
-        _logger.LogInformation("Fetched and cached new price: {Price}", price.Value);
-        return price.Value;
+            logger.LogInformation("Fetched and cached new price: {Price}", finalPrice);
+            return finalPrice;
+        });
     }
 
     private async Task<decimal?> FetchBranikPriceAsync()
     {
         try
         {
-            var client = _httpClientFactory.CreateClient();
+            var client = httpClientFactory.CreateClient();
             var response = await client.GetStringAsync(_configuration.Url);
 
             var doc = new HtmlDocument();
@@ -61,13 +46,13 @@ public class AkcniCenyService : IPriceService
             var lowPriceNode = doc.DocumentNode.SelectSingleNode("//span[@itemprop='lowPrice']");
             var priceString = lowPriceNode.GetAttributeValue("content", "N/A");
 
-            _logger.LogInformation("Price: {price} CZK", priceString);
+            logger.LogInformation("Price: {price} CZK", priceString);
 
             return decimal.Parse(priceString, CultureInfo.InvariantCulture);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to fetch price from {Url}", _configuration.Url);
+            logger.LogError(ex, "Failed to fetch price from {Url}", _configuration.Url);
             return null;
         }
     }
