@@ -3,6 +3,8 @@
     <File Path="../docker-compose.local.yml" />
     <File Path="../docker-compose.prod.yml" />
     <File Path="BranikBot.ConsoleApp/Dockerfile" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="BranikBot.Tests/BranikBot.Tests.csproj" />
