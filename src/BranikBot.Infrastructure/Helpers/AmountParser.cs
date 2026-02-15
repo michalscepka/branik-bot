@@ -1,11 +1,11 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
-using BranikBot.Infrastructure.Enums;
-using BranikBot.Infrastructure.Models;
+using BranikBot.Domain.Enums;
+using BranikBot.Domain.Models;
 
 namespace BranikBot.Infrastructure.Helpers;
 
-public static class PriceParser
+public static class AmountParser
 {
     private const string NumberPattern = @"\d{1,3}(\s?\d{3})*([.,]\d+)?";
     private const string CurrencySuffix = "CurrencySuffix";
@@ -37,10 +37,10 @@ public static class PriceParser
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace,
         TimeSpan.FromSeconds(1));
 
-    public static IEnumerable<ParsedPrice> ExtractPrices(this string message)
+    public static IEnumerable<UserInput> ExtractAmounts(this string message)
     {
         var matches = BranikRegex.Matches(message);
-        var result = new HashSet<ParsedPrice>();
+        var result = new HashSet<UserInput>();
 
         if (matches.Count is 0)
             return result;
@@ -51,11 +51,11 @@ public static class PriceParser
             var currency = GetCurrencyFromSuffix(match.Groups[CurrencySuffix].Value);
 
             var amount = TryGetAmount(Base, 1, match) ??
-                        TryGetAmount(Thousands, 1_000, match) ??
-                        TryGetAmount(Millions, 1_000_000, match);
+                         TryGetAmount(Thousands, 1_000, match) ??
+                         TryGetAmount(Millions, 1_000_000, match);
 
             if (amount.HasValue)
-                result.Add(new ParsedPrice(amount.Value, currency, originalValue));
+                result.Add(new UserInput(amount.Value, currency, originalValue));
         }
 
         return result;

@@ -1,6 +1,6 @@
-namespace BranikBot.Infrastructure.Helpers;
+namespace BranikBot.Infrastructure.Extensions;
 
-public static class CzechFormatter
+public static class StringExtensions
 {
     extension(int count)
     {

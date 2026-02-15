@@ -1,18 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-    </PropertyGroup>
+    
+    <ItemGroup>
+        <PackageReference Include="HtmlAgilityPack" />
+        <PackageReference Include="JetBrains.Annotations" />
+        <PackageReference Include="Microsoft.Extensions.Caching.Memory" />
+        <PackageReference Include="Microsoft.Extensions.Http" />
+        <PackageReference Include="NetCord.Hosting" />
+        <PackageReference Include="NetCord.Hosting.Services" />
+        <PackageReference Include="Serilog" />
+        <PackageReference Include="Serilog.AspNetCore" />
+        <PackageReference Include="Serilog.Sinks.Async" />
+        <PackageReference Include="Serilog.Sinks.Console" />
+    </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
-      <PackageReference Include="JetBrains.Annotations" Version="2025.2.4" />
-      <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.1" />
-      <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.1" />
-      <PackageReference Include="NetCord.Hosting" Version="1.0.0-alpha.342" />
-      <PackageReference Include="NetCord.Hosting.Services" Version="1.0.0-alpha.342" />
+        <ProjectReference Include="..\BranikBot.Application\BranikBot.Application.csproj"/>
+        <ProjectReference Include="..\BranikBot.Domain\BranikBot.Domain.csproj"/>
     </ItemGroup>
 
 </Project>

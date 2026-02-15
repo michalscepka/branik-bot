@@ -1,0 +1,7 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <ProjectReference Include="..\BranikBot.Domain\BranikBot.Domain.csproj"/>
+    </ItemGroup>
+
+</Project>

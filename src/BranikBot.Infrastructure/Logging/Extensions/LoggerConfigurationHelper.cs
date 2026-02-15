@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 
-namespace Logging;
+namespace BranikBot.Infrastructure.Logging.Extensions;
 
 public static class LoggerConfigurationHelper
 {
@@ -33,7 +33,7 @@ public static class LoggerConfigurationHelper
 
         return loggerConfiguration.CreateBootstrapLogger();
     }
-    
+
     public static void SetupLoggerConfiguration(IConfiguration configuration)
     {
         Log.Logger = new LoggerConfiguration()

@@ -1,4 +1,4 @@
-namespace Logging;
+namespace BranikBot.Infrastructure.Logging;
 
 /// <summary>
 /// Defines standard environment names used throughout the application.
