@@ -7,8 +7,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\BranikBot.Infrastructure\BranikBot.Infrastructure.csproj"/>
-        <ProjectReference Include="..\BranikBot.Application\BranikBot.Application.csproj"/>
-        <ProjectReference Include="..\BranikBot.Domain\BranikBot.Domain.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

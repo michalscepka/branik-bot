@@ -15,7 +15,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\BranikBot.Application\BranikBot.Application.csproj"/>
-        <ProjectReference Include="..\BranikBot.Domain\BranikBot.Domain.csproj"/>
     </ItemGroup>
 
 </Project>
