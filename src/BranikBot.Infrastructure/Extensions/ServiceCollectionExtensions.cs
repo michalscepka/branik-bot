@@ -1,8 +1,8 @@
-using BranikBot.Application.Providers;
 using BranikBot.Application.Formatting;
-using BranikBot.Infrastructure.Providers;
+using BranikBot.Application.Providers;
 using BranikBot.Infrastructure.Configuration;
 using BranikBot.Infrastructure.Formatting;
+using BranikBot.Infrastructure.Providers;
 using BranikBot.Infrastructure.Services;
 using BranikBot.Infrastructure.Services.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
