@@ -9,6 +9,7 @@
         <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.1"/>
         <PackageVersion Include="NetCord.Hosting" Version="1.0.0-alpha.342"/>
         <PackageVersion Include="NetCord.Hosting.Services" Version="1.0.0-alpha.342"/>
+        <PackageVersion Include="Polly" Version="8.6.5"/>
         <PackageVersion Include="Serilog" Version="4.3.1"/>
         <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0"/>
         <PackageVersion Include="Serilog.Sinks.Async" Version="2.1.0"/>

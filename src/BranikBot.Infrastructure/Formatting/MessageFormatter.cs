@@ -1,6 +1,6 @@
 using System.Text;
-using BranikBot.Application.Providers;
 using BranikBot.Application.Formatting;
+using BranikBot.Application.Providers;
 using BranikBot.Application.Resources;
 using BranikBot.Domain;
 using BranikBot.Domain.Enums;
