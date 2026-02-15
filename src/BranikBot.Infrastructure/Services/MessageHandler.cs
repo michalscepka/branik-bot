@@ -80,6 +80,8 @@ public class MessageHandler(
             var chatMessage = await messageFormatter.FormatMessageAsync(amounts, marketPrice);
 
             await gatewayClient.Rest.SendMessageAsync(message.ChannelId, chatMessage);
+
+            SetChannelCooldown(message.ChannelId);
         }
         catch (Exception ex)
         {
@@ -113,18 +115,24 @@ public class MessageHandler(
     private bool IsChannelOnCooldown(ulong channelId)
     {
         var utcNow = DateTime.UtcNow;
-        var cooldown = _discordConfiguration.ChannelCooldown;
+        var cooldown = _discordConfig.ChannelCooldown;
 
         lock (_cooldownLock)
         {
-            if (_lastMessageTimestamps.TryGetValue(channelId, out var lastSent))
-            {
-                if (utcNow - lastSent < cooldown)
-                    return true;
-            }
+            if (!_lastMessageTimestamps.TryGetValue(channelId, out var lastSent))
+                return false;
 
+            return utcNow - lastSent < cooldown;
+        }
+    }
+
+    private void SetChannelCooldown(ulong channelId)
+    {
+        var utcNow = DateTime.UtcNow;
+
+        lock (_cooldownLock)
+        {
             _lastMessageTimestamps[channelId] = utcNow;
-            return false;
         }
     }
 }
