@@ -2,14 +2,13 @@ using System.Net;
 using BranikBot.Domain.Enums;
 using BranikBot.Infrastructure.Configuration;
 using BranikBot.Infrastructure.Providers;
-using BranikBot.Infrastructure.Services;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
 
-namespace BranikBot.Tests.Services;
+namespace BranikBot.Tests.Providers;
 
 public class CnbExchangeRateProviderTests
 {

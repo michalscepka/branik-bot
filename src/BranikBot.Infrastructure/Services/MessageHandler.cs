@@ -30,7 +30,7 @@ public class MessageHandler(
         .AddRetry(new RetryStrategyOptions<RestMessage>
         {
             ShouldHandle = new PredicateBuilder<RestMessage>()
-                .HandleResult(m => m.Embeds.Count is 0),
+                .HandleResult(m => m.Flags != 0),
             BackoffType = DelayBackoffType.Constant,
             Delay = TimeSpan.FromSeconds(RetryDelay),
             MaxRetryAttempts = RetryAttempts,
@@ -91,11 +91,11 @@ public class MessageHandler(
 
     private async ValueTask<string> GetEuroChampionMessage(Message message)
     {
-        var euroChampionMessage = await _botMessagePipeline.ExecuteAsync(async ct =>
+        var restMessage = await _botMessagePipeline.ExecuteAsync(async ct =>
             await gatewayClient.Rest.GetMessageAsync(message.ChannelId, message.Id, cancellationToken: ct));
 
-        var sb = new StringBuilder(euroChampionMessage.Content);
-        foreach (var embed in euroChampionMessage.Embeds)
+        var sb = new StringBuilder(restMessage.Content);
+        foreach (var embed in restMessage.Embeds)
         {
             sb.AppendLine(embed.Title);
             sb.AppendLine(embed.Description);
