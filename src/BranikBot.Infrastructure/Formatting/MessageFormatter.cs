@@ -1,14 +1,15 @@
 using System.Text;
+using BranikBot.Application.Providers;
+using BranikBot.Application.Formatting;
 using BranikBot.Application.Resources;
-using BranikBot.Application.Services;
+using BranikBot.Domain;
 using BranikBot.Domain.Enums;
 using BranikBot.Domain.Models;
-using BranikBot.Domain.Services;
 using BranikBot.Infrastructure.Extensions;
 
 namespace BranikBot.Infrastructure.Formatting;
 
-public class MessageFormatter(IExchangeRateService exchangeRateService) : IMessageFormatter
+public class MessageFormatter(IExchangeRateProvider exchangeRateClient) : IMessageFormatter
 {
     public async ValueTask<string> FormatMessageAsync(IEnumerable<UserInput> userInputs, decimal marketPrice)
     {
@@ -17,7 +18,7 @@ public class MessageFormatter(IExchangeRateService exchangeRateService) : IMessa
         var exchangeRate = 0m;
 
         if (inputs.Any(p => p.Currency == Currency.Eur))
-            exchangeRate = await exchangeRateService.GetExchangeRateAsync(Currency.Eur);
+            exchangeRate = await exchangeRateClient.GetExchangeRateAsync(Currency.Eur);
 
         foreach (var input in inputs)
         {

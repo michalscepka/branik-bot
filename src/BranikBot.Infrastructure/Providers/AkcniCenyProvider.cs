@@ -1,18 +1,18 @@
 using System.Globalization;
-using BranikBot.Application.Services;
+using BranikBot.Application.Providers;
 using BranikBot.Infrastructure.Configuration;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace BranikBot.Infrastructure.Services;
+namespace BranikBot.Infrastructure.Providers;
 
-public class AkcniCenyService(
+public class AkcniCenyProvider(
+    HttpClient httpClient,
     IMemoryCache cache,
-    IHttpClientFactory httpClientFactory,
-    ILogger<AkcniCenyService> logger,
-    IOptions<MarketConfiguration> configuration) : IPriceService
+    ILogger<AkcniCenyProvider> logger,
+    IOptions<MarketConfiguration> configuration) : IMarketPriceProvider
 {
     private readonly MarketConfiguration _configuration = configuration.Value;
 
@@ -37,8 +37,7 @@ public class AkcniCenyService(
     {
         try
         {
-            var client = httpClientFactory.CreateClient();
-            var response = await client.GetStringAsync(_configuration.Url);
+            var response = await httpClient.GetStringAsync(_configuration.Url);
 
             var doc = new HtmlDocument();
             doc.LoadHtml(response);

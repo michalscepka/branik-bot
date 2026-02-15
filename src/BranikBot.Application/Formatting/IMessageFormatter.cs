@@ -1,6 +1,6 @@
 using BranikBot.Domain.Models;
 
-namespace BranikBot.Application.Services;
+namespace BranikBot.Application.Formatting;
 
 public interface IMessageFormatter
 {

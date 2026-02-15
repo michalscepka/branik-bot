@@ -1,7 +1,9 @@
+using BranikBot.Application.Providers;
+using BranikBot.Application.Formatting;
+using BranikBot.Infrastructure.Providers;
 using BranikBot.Infrastructure.Configuration;
-using BranikBot.Infrastructure.Services;
-using BranikBot.Application.Services;
 using BranikBot.Infrastructure.Formatting;
+using BranikBot.Infrastructure.Services;
 using BranikBot.Infrastructure.Services.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -37,9 +39,10 @@ public static class ServiceCollectionExtensions
 
         services.AddMemoryCache();
         services.AddHttpClient();
+        services.AddHttpClient<IMarketPriceProvider, AkcniCenyProvider>();
+        services.AddHttpClient<IExchangeRateProvider, CnbExchangeRateProvider>();
+
         services.AddSingleton<IMessageHandler, MessageHandler>();
-        services.AddSingleton<IPriceService, AkcniCenyService>();
-        services.AddSingleton<IExchangeRateService, CnbExchangeRateService>();
         services.AddSingleton<IMessageFormatter, MessageFormatter>();
         services.AddHostedService<DiscordBackgroundService>();
 

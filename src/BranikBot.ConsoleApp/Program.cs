@@ -1,9 +1,9 @@
-﻿using BranikBot.Infrastructure.Extensions;
+﻿using System.Globalization;
 using BranikBot.ConsoleApp.Extensions;
+using BranikBot.Infrastructure.Extensions;
+using BranikBot.Infrastructure.Logging.Extensions;
 using Microsoft.Extensions.Hosting;
 using Serilog;
-using System.Globalization;
-using BranikBot.Infrastructure.Logging.Extensions;
 
 try
 {

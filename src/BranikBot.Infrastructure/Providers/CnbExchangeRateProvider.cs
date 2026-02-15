@@ -1,19 +1,19 @@
 using System.Globalization;
 using System.Xml.Linq;
-using BranikBot.Infrastructure.Configuration;
+using BranikBot.Application.Providers;
 using BranikBot.Domain.Enums;
-using BranikBot.Application.Services;
+using BranikBot.Infrastructure.Configuration;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace BranikBot.Infrastructure.Services;
+namespace BranikBot.Infrastructure.Providers;
 
-public class CnbExchangeRateService(
-    IHttpClientFactory httpClientFactory,
+public class CnbExchangeRateProvider(
+    HttpClient httpClient,
     IMemoryCache cache,
     IOptions<ExchangeRateConfiguration> configuration,
-    ILogger<CnbExchangeRateService> logger) : IExchangeRateService
+    ILogger<CnbExchangeRateProvider> logger) : IExchangeRateProvider
 {
     private readonly ExchangeRateConfiguration _configuration = configuration.Value;
 
@@ -38,8 +38,7 @@ public class CnbExchangeRateService(
     {
         try
         {
-            var client = httpClientFactory.CreateClient();
-            var response = await client.GetStringAsync(_configuration.Url);
+            var response = await httpClient.GetStringAsync(_configuration.Url);
             var doc = XDocument.Parse(response);
 
             var rows = doc.Descendants("radek");

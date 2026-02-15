@@ -1,8 +1,8 @@
 using BranikBot.Domain.Enums;
 
-namespace BranikBot.Application.Services;
+namespace BranikBot.Application.Providers;
 
-public interface IExchangeRateService
+public interface IExchangeRateProvider
 {
     ValueTask<decimal> GetExchangeRateAsync(Currency currency);
 }

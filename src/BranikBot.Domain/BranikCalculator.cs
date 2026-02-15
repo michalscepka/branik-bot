@@ -1,4 +1,4 @@
-namespace BranikBot.Domain.Services;
+namespace BranikBot.Domain;
 
 public static class BranikCalculator
 {

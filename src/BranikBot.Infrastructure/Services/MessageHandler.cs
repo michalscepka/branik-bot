@@ -1,5 +1,6 @@
+using BranikBot.Application.Providers;
+using BranikBot.Application.Formatting;
 using BranikBot.Infrastructure.Configuration;
-using BranikBot.Application.Services;
 using BranikBot.Infrastructure.Helpers;
 using BranikBot.Infrastructure.Services.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -10,7 +11,7 @@ namespace BranikBot.Infrastructure.Services;
 
 public class MessageHandler(
     GatewayClient gatewayClient,
-    IPriceService priceService,
+    IMarketPriceProvider marketPriceClient,
     IMessageFormatter messageFormatter,
     IOptions<DiscordConfiguration> discordConfiguration,
     ILogger<MessageHandler> logger) : IMessageHandler
@@ -39,7 +40,7 @@ public class MessageHandler(
                 return;
             }
 
-            var marketPrice = await priceService.GetPriceAsync();
+            var marketPrice = await marketPriceClient.GetPriceAsync();
             var chatMessage = await messageFormatter.FormatMessageAsync(amounts, marketPrice);
 
             await gatewayClient.Rest.SendMessageAsync(message.ChannelId, chatMessage);
