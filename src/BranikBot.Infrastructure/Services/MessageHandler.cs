@@ -6,7 +6,6 @@ using BranikBot.Infrastructure.Helpers;
 using BranikBot.Infrastructure.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using NetCord;
 using NetCord.Gateway;
 using NetCord.Rest;
 using Polly;
