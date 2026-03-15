@@ -11,36 +11,34 @@ dotnet build src/
 dotnet test src/BranikBot.Tests/
 ```
 
-## Obsidian Vault Integration
+Run tests before proposing a commit. If tests fail, fix the issue first.
 
-This project uses an Obsidian vault as a persistent context map across Claude Code sessions.
+## Coding Conventions
 
-**Vault location**: `~/Documents/Obsidian Vaults/branik-bot/`
+- Nullable reference types enabled globally (`Directory.Build.props`)
+- C# 13 extension(T) syntax for new extension methods
+- Never null! - fix the design instead
+- Primary constructors for dependency injection
+- Interfaces in Application layer, implementations in Infrastructure
+- Test naming: `MethodName_Scenario_Expected` (xUnit + Moq, Arrange-Act-Assert)
+- System.Text.Json only - never Newtonsoft.Json
+- NuGet versions in Directory.Packages.props only - never in .csproj
 
-### Slash Commands
+## Branch & Commit Conventions
 
-- `/obsidian-load` — Load vault context at the start of a session
-- `/obsidian-save` — Save session learnings back to the vault
-- `/obsidian-status` — View vault contents and active tasks
-- `/obsidian-search <query>` — Search the vault for specific topics
+- Branch prefixes: `feat/`, `fix/`, `refactor/`
+- Commit messages: Conventional Commits format (e.g., `feat: add cooldown config`)
 
-### When to use
+## Obsidian Vault
 
-- **Start of session**: Run `/obsidian-load` to get context from prior sessions
-- **End of session**: Run `/obsidian-save` to persist what was learned/decided/done
-- **During work**: Reference vault notes when making decisions that relate to prior context
+Persistent context map across sessions at `~/Documents/Obsidian Vaults/branik-bot/`. Use `/obsidian-load` at session start and `/obsidian-save` at session end.
 
-### Vault structure
+## Rules
 
-- `Architecture/` — System design, patterns, tech stack
-- `Code/` — Notes about specific modules, gotchas, integration points
-- `Decisions/` — Architecture Decision Records (ADRs)
-- `Tasks/` — Work items with status tracking
-- `Sessions/` — Session summaries linking everything together
-- `Templates/` — Note templates for consistency
-
-### Conventions
-
-- Use `[[wiki-links]]` to connect related notes
-- Include YAML frontmatter with tags, created/updated dates
-- Keep notes concise and actionable
+- Do not modify the Dockerfile or CI workflows unless explicitly asked.
+- Do not add NuGet packages without asking.
+- Keep the Clean Architecture layer boundaries — Domain and Application must not reference Infrastructure.
+- Do not change public API contracts (interfaces in Application) without discussing first.
+- Security first - when convenience and security conflict, choose security. Deny by default, open selectively.
+- No dead code - remove unused imports, variables, functions, files, and stale references in the same commit
+- No em dashes - never use — anywhere (code, comments, docs, UI). Use - or rewrite the sentence.
