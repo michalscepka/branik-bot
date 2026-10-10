@@ -410,4 +410,146 @@ public class AmountParserTests
         var amount = Assert.Single(result);
         Assert.Equal(expectedText, amount.OriginalText);
     }
+
+    [Theory]
+    // Dollars
+    [InlineData("50 usd", 50, Currency.Usd)]
+    [InlineData("50 USD", 50, Currency.Usd)]
+    [InlineData("1 dolar", 1, Currency.Usd)]
+    [InlineData("2 dolary", 2, Currency.Usd)]
+    [InlineData("50 dolarů", 50, Currency.Usd)]
+    [InlineData("50 dolaru", 50, Currency.Usd)]
+    [InlineData("20 $", 20, Currency.Usd)]
+    [InlineData("20$", 20, Currency.Usd)]
+    // Pounds
+    [InlineData("30 gbp", 30, Currency.Gbp)]
+    [InlineData("1 libra", 1, Currency.Gbp)]
+    [InlineData("2 libry", 2, Currency.Gbp)]
+    [InlineData("30 liber", 30, Currency.Gbp)]
+    [InlineData("1 libru", 1, Currency.Gbp)]
+    [InlineData("30 £", 30, Currency.Gbp)]
+    // Zloty
+    [InlineData("100 pln", 100, Currency.Pln)]
+    [InlineData("100 zł", 100, Currency.Pln)]
+    [InlineData("100 zl", 100, Currency.Pln)]
+    [InlineData("100zł", 100, Currency.Pln)]
+    [InlineData("100 ZŁ", 100, Currency.Pln)]
+    [InlineData("1 zlotý", 1, Currency.Pln)]
+    [InlineData("2 zloté", 2, Currency.Pln)]
+    [InlineData("100 zlotých", 100, Currency.Pln)]
+    [InlineData("1 zloťák", 1, Currency.Pln)]
+    [InlineData("2 zloťáky", 2, Currency.Pln)]
+    [InlineData("100 zloťáků", 100, Currency.Pln)]
+    [InlineData("100 zlotek", 100, Currency.Pln)]
+    [InlineData("100 goldu", 100, Currency.Pln)]
+    [InlineData("100 goldů", 100, Currency.Pln)]
+    // Forms added to the older currencies
+    [InlineData("50 eurů", 50, Currency.Eur)]
+    [InlineData("1 korunu", 1, Currency.Czk)]
+    public void ExtractAmounts_NumberWithCurrency_ReturnsThatCurrency(
+        string input, decimal expectedAmount, Currency expectedCurrency)
+    {
+        var result = input.ExtractAmounts();
+
+        var amount = Assert.Single(result);
+        Assert.Equal(expectedAmount, amount.Amount);
+        Assert.Equal(expectedCurrency, amount.Currency);
+        Assert.Equal(input, amount.OriginalText);
+    }
+
+    [Theory]
+    [InlineData("5k usd", 5_000, Currency.Usd)]
+    [InlineData("2 miliony dolarů", 2_000_000, Currency.Usd)]
+    [InlineData("1,5 mil. $", 1_500_000, Currency.Usd)]
+    [InlineData("20 tisíc liber", 20_000, Currency.Gbp)]
+    [InlineData("3 mld £", 3_000_000_000, Currency.Gbp)]
+    [InlineData("5 tisíc zlotých", 5_000, Currency.Pln)]
+    [InlineData("2 táce zł", 2_000, Currency.Pln)]
+    [InlineData("stovka dolarů", 100, Currency.Usd)]
+    public void ExtractAmounts_MultiplierWithNewCurrency_ReturnsMultipliedAmountInThatCurrency(
+        string input, decimal expectedAmount, Currency expectedCurrency)
+    {
+        var result = input.ExtractAmounts();
+
+        var amount = Assert.Single(result);
+        Assert.Equal(expectedAmount, amount.Amount);
+        Assert.Equal(expectedCurrency, amount.Currency);
+        Assert.Equal(input, amount.OriginalText);
+    }
+
+    [Theory]
+    [InlineData("$20", 20, Currency.Usd)]
+    [InlineData("$ 20", 20, Currency.Usd)]
+    [InlineData("$19.99", 19.99, Currency.Usd)]
+    [InlineData("$1 000", 1_000, Currency.Usd)]
+    [InlineData("$5k", 5_000, Currency.Usd)]
+    [InlineData("$2 miliony", 2_000_000, Currency.Usd)]
+    [InlineData("$1,5 mil.", 1_500_000, Currency.Usd)]
+    [InlineData("€20", 20, Currency.Eur)]
+    [InlineData("€5k", 5_000, Currency.Eur)]
+    [InlineData("£30", 30, Currency.Gbp)]
+    [InlineData("£3 mld", 3_000_000_000, Currency.Gbp)]
+    public void ExtractAmounts_SymbolBeforeNumber_ReturnsThatCurrency(
+        string input, decimal expectedAmount, Currency expectedCurrency)
+    {
+        var result = input.ExtractAmounts();
+
+        var amount = Assert.Single(result);
+        Assert.Equal(expectedAmount, amount.Amount);
+        Assert.Equal(expectedCurrency, amount.Currency);
+        Assert.Equal(input, amount.OriginalText);
+    }
+
+    [Theory]
+    [InlineData("Stálo to $20, fakt.", "$20", Currency.Usd)]
+    [InlineData("Dal jsem 50 dolarů.", "50 dolarů", Currency.Usd)]
+    [InlineData("V Polsku za 100 zł!", "100 zł", Currency.Pln)]
+    [InlineData("Lístek za £30 a pivo zdarma", "£30", Currency.Gbp)]
+    public void ExtractAmounts_NewCurrencyInsideSentence_QuotesOnlyTheAmount(
+        string input, string expectedText, Currency expectedCurrency)
+    {
+        var result = input.ExtractAmounts();
+
+        var amount = Assert.Single(result);
+        Assert.Equal(expectedText, amount.OriginalText);
+        Assert.Equal(expectedCurrency, amount.Currency);
+    }
+
+    [Theory]
+    // A currency must end where the word ends
+    [InlineData("100 kcal")]
+    [InlineData("100 zlých lidí")]
+    [InlineData("5 dolarových bankovek")]
+    [InlineData("3 eurofondy")]
+    [InlineData("2 librové")]
+    [InlineData("10 usdt")]
+    // A symbol or a word without a number
+    [InlineData("$")]
+    [InlineData("$ a €")]
+    [InlineData("dolarů")]
+    [InlineData("zł")]
+    // Symbols that only come after the number
+    [InlineData("kč 100")]
+    [InlineData("zł 100")]
+    public void ExtractAmounts_CurrencyLookAlike_ReturnsEmpty(string input)
+    {
+        var result = input.ExtractAmounts();
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void ExtractAmounts_SeveralCurrenciesInOneMessage_ReturnsEachWithItsCurrency()
+    {
+        var input = "Mám 100 kč, 20 eur, $30, 40 liber a 50 zł.";
+
+        var result = input.ExtractAmounts().ToList();
+
+        Assert.Equal(5, result.Count);
+        Assert.Contains(result, a => a is { Amount: 100, Currency: Currency.Czk });
+        Assert.Contains(result, a => a is { Amount: 20, Currency: Currency.Eur });
+        Assert.Contains(result, a => a is { Amount: 30, Currency: Currency.Usd });
+        Assert.Contains(result, a => a is { Amount: 40, Currency: Currency.Gbp });
+        Assert.Contains(result, a => a is { Amount: 50, Currency: Currency.Pln });
+    }
 }

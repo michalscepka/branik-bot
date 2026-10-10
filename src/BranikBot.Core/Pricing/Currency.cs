@@ -3,5 +3,8 @@ namespace BranikBot.Pricing;
 public enum Currency
 {
     Czk,
-    Eur
+    Eur,
+    Usd,
+    Gbp,
+    Pln
 }

@@ -26,24 +26,27 @@ public class ExchangeRateSamplingBackgroundServiceTests
     }
 
     [Fact]
-    public async Task SampleAsync_ProviderReturnsRate_SetsLatestRate()
+    public async Task SampleAsync_ProviderReturnsRates_SetsLatestRateOfEachCurrency()
     {
         // Arrange
-        _providerMock.Setup(p => p.GetExchangeRateAsync(Currency.Eur)).ReturnsAsync(24.340m);
+        SetupRates(new() { [Currency.Eur] = 24.340m, [Currency.Usd] = 20.871m, [Currency.Pln] = 5.742m });
 
         // Act
         await _service.SampleAsync();
 
         // Assert
         Assert.Equal(24.340m, _latestExchangeRate.Get(Currency.Eur));
+        Assert.Equal(20.871m, _latestExchangeRate.Get(Currency.Usd));
+        Assert.Equal(5.742m, _latestExchangeRate.Get(Currency.Pln));
+        Assert.Null(_latestExchangeRate.Get(Currency.Gbp));
     }
 
     [Fact]
-    public async Task SampleAsync_ProviderReturnsNoRate_KeepsLastRate()
+    public async Task SampleAsync_ProviderReturnsNothing_KeepsLastRates()
     {
         // Arrange
         _latestExchangeRate.Set(Currency.Eur, 24.340m);
-        _providerMock.Setup(p => p.GetExchangeRateAsync(Currency.Eur)).ReturnsAsync((decimal?)null);
+        SetupRates(null);
 
         // Act
         await _service.SampleAsync();
@@ -53,28 +56,65 @@ public class ExchangeRateSamplingBackgroundServiceTests
     }
 
     [Fact]
-    public async Task SampleAsync_ProviderReturnsNoRateWithNoRate_SetsNothing()
+    public async Task SampleAsync_ProviderReturnsNothingWithNoRate_SetsNothing()
     {
         // Arrange
-        _providerMock.Setup(p => p.GetExchangeRateAsync(Currency.Eur)).ReturnsAsync((decimal?)null);
+        SetupRates(null);
 
         // Act
         await _service.SampleAsync();
 
         // Assert
         Assert.Null(_latestExchangeRate.Get(Currency.Eur));
+    }
+
+    [Fact]
+    public async Task SampleAsync_CurrencyMissingFromNewRates_KeepsItsLastRate()
+    {
+        // Arrange
+        _latestExchangeRate.Set(Currency.Usd, 20.871m);
+        SetupRates(new() { [Currency.Eur] = 24.340m });
+
+        // Act
+        await _service.SampleAsync();
+
+        // Assert
+        Assert.Equal(24.340m, _latestExchangeRate.Get(Currency.Eur));
+        Assert.Equal(20.871m, _latestExchangeRate.Get(Currency.Usd));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task SampleAsync_RateIsNotPositive_KeepsLastRate(decimal rate)
+    {
+        // Arrange
+        _latestExchangeRate.Set(Currency.Eur, 24.340m);
+        SetupRates(new() { [Currency.Eur] = rate, [Currency.Usd] = 20.871m });
+
+        // Act
+        await _service.SampleAsync();
+
+        // Assert
+        Assert.Equal(24.340m, _latestExchangeRate.Get(Currency.Eur));
+        Assert.Equal(20.871m, _latestExchangeRate.Get(Currency.Usd));
     }
 
     [Fact]
     public async Task SampleAsync_ProviderThrows_DoesNotThrow()
     {
         // Arrange
-        _providerMock.Setup(p => p.GetExchangeRateAsync(Currency.Eur)).ThrowsAsync(new InvalidOperationException());
+        _providerMock.Setup(p => p.GetExchangeRatesAsync()).ThrowsAsync(new InvalidOperationException());
 
         // Act
         await _service.SampleAsync();
 
         // Assert
         Assert.Null(_latestExchangeRate.Get(Currency.Eur));
+    }
+
+    private void SetupRates(Dictionary<Currency, decimal>? rates)
+    {
+        _providerMock.Setup(p => p.GetExchangeRatesAsync()).ReturnsAsync(rates);
     }
 }

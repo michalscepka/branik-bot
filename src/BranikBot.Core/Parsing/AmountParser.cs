@@ -10,7 +10,7 @@ public static class AmountParser
     private const string NumberPattern = @"\d{1,3}(\s?\d{3})*([.,]\d+)?";
     private const string Number = "Number";
     private const string Multiplier = "Multiplier";
-    private const string CurrencySuffix = "CurrencySuffix";
+    private const string CurrencyText = "CurrencyText";
 
     // Anything above this is answered the same way, and capping it keeps later calculations from overflowing.
     private const decimal MaxAmount = 1_000_000_000_000_000_000m;
@@ -18,11 +18,21 @@ public static class AmountParser
     // Every word list below is written without diacritics, because the message is searched without them:
     // "kc" also covers "kč", "tisic" covers "tisíc" and "milion" covers "milión".
 
-    private static readonly Dictionary<Currency, string[]> CurrencyDefinitions = new()
-    {
-        { Currency.Eur, ["eur", "euro", "eura", "€"] },
-        { Currency.Czk, ["kc", "czk", "korun", "koruny", "koruna", ",-"] }
-    };
+    // Suffixes come after the number ("100 kc"). Symbols may also come before it ("$20", "20 $").
+    // "zł" is listed next to "zl" because "ł" is a letter of its own, not an "l" with a diacritic.
+    private static readonly CurrencyDefinition[] CurrencyDefinitions =
+    [
+        new(Currency.Czk, Suffixes: ["kc", "czk", "korun", "koruny", "koruna", "korunu", ",-"], Symbols: []),
+        new(Currency.Eur, Suffixes: ["eur", "euro", "eura", "euru"], Symbols: ["€"]),
+        new(Currency.Usd, Suffixes: ["usd", "dolar", "dolary", "dolaru"], Symbols: ["$"]),
+        new(Currency.Gbp, Suffixes: ["gbp", "libra", "libry", "libru", "liber"], Symbols: ["£"]),
+        new(Currency.Pln,
+            Suffixes:
+            [
+                "pln", "zl", "zł", "zloty", "zlote", "zlotych", "zlotak", "zlotaky", "zlotaku", "zlotek", "goldu"
+            ],
+            Symbols: [])
+    ];
 
     // Need a number in front: "20 tisic", "2 tace", "3 melouny".
     // Words must match exactly. Abbreviations may also be followed by a dot ("tis.", "mil.").
@@ -54,8 +64,7 @@ public static class AmountParser
 
     private static readonly Dictionary<string, decimal> Factors = CreateFactors();
 
-    private static readonly string CurrencySuffixPattern =
-        JoinAlternatives(CurrencyDefinitions.Values.SelectMany(suffixes => suffixes));
+    private static readonly Dictionary<string, Currency> Currencies = CreateCurrencies();
 
     private static readonly string CountedWordPattern = JoinAlternatives(
         MultiplierDefinitions.SelectMany(definition => definition.Words)
@@ -68,22 +77,32 @@ public static class AmountParser
     private static readonly string StandaloneWordPattern =
         JoinAlternatives(DenominationDefinitions.SelectMany(definition => definition.Singular));
 
-    // Two shapes of an amount:
-    //   1. A number followed by a word, a currency or both: "20 tisic", "5 stovek", "100 kc", "1,5 mil. Kc".
-    //   2. A denomination on its own, with an optional currency: "stovka", "petistovka euro".
-    // The \b keeps a word from matching a part of a longer one ("k" in "kc", "mil" in "mily").
+    private static readonly string CurrencySuffixPattern = JoinAlternatives(
+        CurrencyDefinitions.SelectMany(definition => definition.Suffixes.Concat(definition.Symbols)));
+
+    private static readonly string CurrencySymbolPattern =
+        JoinAlternatives(CurrencyDefinitions.SelectMany(definition => definition.Symbols));
+
+    // The \b keeps a word from matching the start of a longer one ("k" in "kc", "mil" in "mily").
+    private static readonly string MultiplierPattern =
+        $@"(?<{Multiplier}>(?:{CountedWordPattern})\b|(?:{AbbreviationPattern})\b\.?)";
+
+    // (?!\w) does the same job as \b, but also works after a symbol: "100 kc" is not found in "100 kcal".
+    private static readonly string SuffixPattern = $@"(?<{CurrencyText}>(?:{CurrencySuffixPattern})(?!\w))";
+
+    private static readonly string PrefixPattern = $"(?<{CurrencyText}>{CurrencySymbolPattern})";
+
+    // Three shapes of an amount:
+    //   1. A currency symbol, a number and maybe a multiplier: "$20", "€5k".
+    //   2. A number followed by a multiplier, a currency or both: "20 tisic", "5 stovek", "100 kc", "1,5 mil. Kc".
+    //   3. A denomination on its own, with an optional currency: "stovka", "petistovka euro".
     private static readonly string Pattern =
         $"""
-         (?<{Number}>{NumberPattern})\s*
-         (?:
-             (?<{Multiplier}>(?:{CountedWordPattern})\b|(?:{AbbreviationPattern})\b\.?)
-             (?:\s*(?<{CurrencySuffix}>{CurrencySuffixPattern}))?
-             |
-             (?<{CurrencySuffix}>{CurrencySuffixPattern})
-         )
+         {PrefixPattern}\s?(?<{Number}>{NumberPattern})(?:\s*{MultiplierPattern})?
          |
-         \b(?<{Multiplier}>{StandaloneWordPattern})\b
-         (?:\s*(?<{CurrencySuffix}>{CurrencySuffixPattern}))?
+         (?<{Number}>{NumberPattern})\s*(?:{MultiplierPattern}(?:\s*{SuffixPattern})?|{SuffixPattern})
+         |
+         \b(?<{Multiplier}>{StandaloneWordPattern})\b(?:\s*{SuffixPattern})?
          """;
 
     private static readonly Regex BranikRegex = new(
@@ -104,7 +123,7 @@ public static class AmountParser
             if (amount is null)
                 continue;
 
-            var currency = GetCurrencyFromSuffix(match.Groups[CurrencySuffix].Value);
+            var currency = GetCurrency(match.Groups[CurrencyText]);
             var originalText = message.Substring(match.Index, match.Length);
             result.Add(new UserInput(amount.Value, currency, originalText));
         }
@@ -140,20 +159,9 @@ public static class AmountParser
         return Factors.TryGetValue(text, out var factor) ? factor : null;
     }
 
-    private static Currency GetCurrencyFromSuffix(string suffix)
+    private static Currency GetCurrency(Group currencyText)
     {
-        if (string.IsNullOrWhiteSpace(suffix))
-            return Currency.Czk;
-
-        var normalizedSuffix = suffix.Trim();
-
-        foreach (var (currency, patterns) in CurrencyDefinitions)
-        {
-            if (patterns.Any(p => string.Equals(p, normalizedSuffix, StringComparison.OrdinalIgnoreCase)))
-                return currency;
-        }
-
-        return Currency.Czk;
+        return currencyText.Success ? Currencies.GetValueOrDefault(currencyText.Value) : Currency.Czk;
     }
 
     private static bool TryParseDecimal(string value, out decimal result)
@@ -201,10 +209,25 @@ public static class AmountParser
         return factors;
     }
 
+    private static Dictionary<string, Currency> CreateCurrencies()
+    {
+        var currencies = new Dictionary<string, Currency>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var definition in CurrencyDefinitions)
+        {
+            foreach (var text in definition.Suffixes.Concat(definition.Symbols))
+                currencies.Add(text, definition.Currency);
+        }
+
+        return currencies;
+    }
+
     private static string JoinAlternatives(IEnumerable<string> texts)
     {
         return string.Join("|", texts.OrderByDescending(text => text.Length).Select(Regex.Escape));
     }
+
+    private sealed record CurrencyDefinition(Currency Currency, string[] Suffixes, string[] Symbols);
 
     private sealed record MultiplierDefinition(decimal Factor, string[] Words, string[] Abbreviations);
 

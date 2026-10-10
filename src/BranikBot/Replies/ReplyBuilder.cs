@@ -15,7 +15,6 @@ public class ReplyBuilder(
 {
     private readonly int _maxAmounts = discordConfiguration.Value.MaxAmountsPerReply;
 
-    // Returns null when the text holds no amounts or there is nothing to answer with.
     public string? Build(string content)
     {
         var amounts = content.ExtractAmounts().ToList();
@@ -29,11 +28,31 @@ public class ReplyBuilder(
             return null;
         }
 
-        var euroExchangeRate = latestExchangeRate.Get(Currency.Eur);
-        if (euroExchangeRate is null && amounts.Any(a => a.Currency is Currency.Eur))
-            logger.LogWarning("No EUR exchange rate sampled yet, skipping EUR amounts.");
+        var exchangeRates = GetExchangeRates(amounts);
 
-        var reply = MessageFormatter.FormatMessage(amounts, marketPrice.Value, euroExchangeRate, _maxAmounts);
+        var reply = MessageFormatter.FormatMessage(amounts, marketPrice.Value, exchangeRates, _maxAmounts);
         return reply.Length is 0 ? null : reply;
+    }
+
+    private Dictionary<Currency, decimal> GetExchangeRates(List<UserInput> amounts)
+    {
+        var exchangeRates = new Dictionary<Currency, decimal>();
+
+        foreach (var currency in amounts.Select(amount => amount.Currency).Distinct())
+        {
+            if (currency is Currency.Czk)
+                continue;
+
+            var rate = latestExchangeRate.Get(currency);
+            if (rate is null)
+            {
+                logger.LogWarning("No {Currency} exchange rate sampled yet, skipping those amounts.", currency);
+                continue;
+            }
+
+            exchangeRates[currency] = rate.Value;
+        }
+
+        return exchangeRates;
     }
 }

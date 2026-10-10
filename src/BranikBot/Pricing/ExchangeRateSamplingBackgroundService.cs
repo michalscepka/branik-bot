@@ -27,11 +27,15 @@ public class ExchangeRateSamplingBackgroundService(
     {
         try
         {
-            var rate = await exchangeRateProvider.GetExchangeRateAsync(Currency.Eur);
-            if (rate is not > 0)
+            var rates = await exchangeRateProvider.GetExchangeRatesAsync();
+            if (rates is null)
                 return;
 
-            latestExchangeRate.Set(Currency.Eur, rate.Value);
+            foreach (var (currency, rate) in rates)
+            {
+                if (rate > 0)
+                    latestExchangeRate.Set(currency, rate);
+            }
         }
         catch (Exception ex)
         {

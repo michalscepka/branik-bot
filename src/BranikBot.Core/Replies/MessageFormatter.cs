@@ -7,10 +7,10 @@ namespace BranikBot.Replies;
 public static class MessageFormatter
 {
     public static string FormatMessage(IEnumerable<UserInput> userInputs, decimal marketPrice,
-        decimal? euroExchangeRate, int maxAmounts)
+        IReadOnlyDictionary<Currency, decimal> exchangeRates, int maxAmounts)
     {
         var largest = userInputs
-            .Select(input => (Input: input, ExchangeRate: input.Currency is Currency.Eur ? euroExchangeRate : 1m))
+            .Select(input => (Input: input, ExchangeRate: TryGetExchangeRate(input.Currency, exchangeRates)))
             .Where(x => x.ExchangeRate is not null)
             .Select(x => (x.Input, ExchangeRate: x.ExchangeRate.GetValueOrDefault()))
             .OrderByDescending(x => x.Input.Amount * x.ExchangeRate)
@@ -28,6 +28,14 @@ public static class MessageFormatter
         return result.ToString();
     }
 
+    private static decimal? TryGetExchangeRate(Currency currency, IReadOnlyDictionary<Currency, decimal> exchangeRates)
+    {
+        if (currency is Currency.Czk)
+            return 1m;
+
+        return exchangeRates.TryGetValue(currency, out var rate) ? rate : null;
+    }
+
     private static string CreateMessageLine(UserInput userInput, decimal valueInCzk, decimal marketPrice, decimal exchangeRate)
     {
         var (branikCount, parcelCount, palletsCount) = BranikCalculator.CalculateAmounts(valueInCzk, marketPrice);
@@ -37,7 +45,7 @@ public static class MessageFormatter
 
         var postfix = Messages.Postfix;
         if (userInput.Currency is not Currency.Czk)
-            postfix += string.Format(Messages.EuroExchangeRateNote, exchangeRate);
+            postfix += string.Format(Messages.ExchangeRateNote, exchangeRate, Messages.GetOneUnit(userInput.Currency));
 
         return branikCount switch
         {

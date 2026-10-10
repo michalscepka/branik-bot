@@ -158,4 +158,55 @@ public sealed class ReplyBuilderTests : IDisposable
         // Assert
         Assert.Null(reply);
     }
+
+    [Theory]
+    [InlineData("mam 10 usd", Currency.Usd, "za jeden dolar.")]
+    [InlineData("mam $10", Currency.Usd, "za jeden dolar.")]
+    [InlineData("mam 10 liber", Currency.Gbp, "za jednu libru.")]
+    [InlineData("mam 10 zł", Currency.Pln, "za jeden zlotý.")]
+    public void Build_ForeignAmountWithExchangeRate_ReturnsReplyNamingTheCurrency(
+        string content, Currency currency, string expectedEnding)
+    {
+        // Arrange
+        _priceHistoryStore.Record(100m, Now);
+        _latestExchangeRate.Set(currency, 25m);
+
+        // Act
+        var reply = _builder.Build(content);
+
+        // Assert
+        Assert.NotNull(reply);
+        Assert.Contains("To by stačilo na 2 dvoulitrovky Braníčka ve slevě!", reply);
+        Assert.Contains(expectedEnding, reply);
+    }
+
+    [Fact]
+    public void Build_ForeignAmountWithRateOfAnotherCurrencyOnly_ReturnsNull()
+    {
+        // Arrange
+        _priceHistoryStore.Record(100m, Now);
+        _latestExchangeRate.Set(Currency.Eur, 25m);
+
+        // Act
+        var reply = _builder.Build("mam 10 usd");
+
+        // Assert
+        Assert.Null(reply);
+    }
+
+    [Fact]
+    public void Build_TwoForeignAmountsWithOneRate_AnswersOnlyTheOneWithRate()
+    {
+        // Arrange
+        _priceHistoryStore.Record(100m, Now);
+        _latestExchangeRate.Set(Currency.Usd, 20m);
+
+        // Act
+        var reply = _builder.Build("mam 1000 liber a 10 usd");
+
+        // Assert
+        Assert.NotNull(reply);
+        Assert.Contains("> 10 usd", reply);
+        Assert.DoesNotContain("1000 liber", reply);
+    }
 }

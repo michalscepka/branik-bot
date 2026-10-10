@@ -8,11 +8,15 @@ public class MessageFormatterTests
 {
     private const int MaxAmounts = 10;
 
+    private static readonly Dictionary<Currency, decimal> NoRates = [];
+
+    private static Dictionary<Currency, decimal> Rate(Currency currency, decimal rate) => new() { [currency] = rate };
+
     [Fact]
     public void FormatMessage_WithEmptyInputs_ReturnsEmptyString()
     {
         // Act
-        var result = MessageFormatter.FormatMessage([], 100m, null, MaxAmounts);
+        var result = MessageFormatter.FormatMessage([], 100m, NoRates, MaxAmounts);
 
         // Assert
         Assert.Empty(result);
@@ -26,7 +30,7 @@ public class MessageFormatterTests
         var marketPrice = 100m;
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, marketPrice, null, MaxAmounts);
+        var result = MessageFormatter.FormatMessage(inputs, marketPrice, NoRates, MaxAmounts);
 
         // Assert
         Assert.Contains("Lítost má v srdci, ale 50 kc nepostačí ani na jednu číši Braníčka plastového ve slevě.", result);
@@ -40,7 +44,7 @@ public class MessageFormatterTests
         var marketPrice = 100m; // 2 bottles
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, marketPrice, null, MaxAmounts);
+        var result = MessageFormatter.FormatMessage(inputs, marketPrice, NoRates, MaxAmounts);
 
         // Assert
         Assert.Contains("To by stačilo na 2 dvoulitrovky Braníčka ve slevě!", result);
@@ -54,7 +58,7 @@ public class MessageFormatterTests
         var marketPrice = 100m; // 120 bottles = 20 parcels
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, marketPrice, null, MaxAmounts);
+        var result = MessageFormatter.FormatMessage(inputs, marketPrice, NoRates, MaxAmounts);
 
         // Assert
         Assert.Contains("To by stačilo na 20 baliku (120 dvoulitrovek) Braníčka ve slevě!", result);
@@ -68,7 +72,7 @@ public class MessageFormatterTests
         var marketPrice = 100m; // 1200 bottles = 200 parcels = 2 pallets
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, marketPrice, null, MaxAmounts);
+        var result = MessageFormatter.FormatMessage(inputs, marketPrice, NoRates, MaxAmounts);
 
         // Assert
         Assert.Contains("To by stačilo na 2 europalety (200 baliku) dvoulitrovek Braníčka ve slevě!", result);
@@ -82,7 +86,7 @@ public class MessageFormatterTests
         var marketPrice = 100m; // 200,000 bottles > 100,000
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, marketPrice, null, MaxAmounts);
+        var result = MessageFormatter.FormatMessage(inputs, marketPrice, NoRates, MaxAmounts);
 
         // Assert
         Assert.Contains("Za tolik by sis mohl koupit rovnou celý Plzeňský Prazdroj!", result);
@@ -99,7 +103,7 @@ public class MessageFormatterTests
         var euroExchangeRate = 25m;
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, marketPrice, euroExchangeRate, MaxAmounts);
+        var result = MessageFormatter.FormatMessage(inputs, marketPrice, Rate(Currency.Eur, euroExchangeRate), MaxAmounts);
 
         // Assert
         Assert.Contains("Za tolik by sis mohl koupit rovnou celý Plzeňský Prazdroj!", result);
@@ -114,7 +118,7 @@ public class MessageFormatterTests
         var exchangeRate = 25m; // 10 EUR * 25 = 250 CZK = 2 bottles
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, marketPrice, exchangeRate, MaxAmounts);
+        var result = MessageFormatter.FormatMessage(inputs, marketPrice, Rate(Currency.Eur, exchangeRate), MaxAmounts);
 
         // Assert
         Assert.Contains("To by stačilo na 2 dvoulitrovky Braníčka ve slevě!", result);
@@ -136,7 +140,7 @@ public class MessageFormatterTests
         var exchangeRate = 25m;
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, marketPrice, exchangeRate, MaxAmounts);
+        var result = MessageFormatter.FormatMessage(inputs, marketPrice, Rate(Currency.Eur, exchangeRate), MaxAmounts);
 
         // Assert
         Assert.Contains("> 250 kc", result);
@@ -152,7 +156,7 @@ public class MessageFormatterTests
         var inputs = new[] { new UserInput(10m, Currency.Eur, "10 eur") };
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, 100m, null, MaxAmounts);
+        var result = MessageFormatter.FormatMessage(inputs, 100m, NoRates, MaxAmounts);
 
         // Assert
         Assert.Empty(result);
@@ -169,7 +173,7 @@ public class MessageFormatterTests
         };
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, 100m, null, MaxAmounts);
+        var result = MessageFormatter.FormatMessage(inputs, 100m, NoRates, MaxAmounts);
 
         // Assert
         Assert.Contains("> 250 kc", result);
@@ -188,7 +192,7 @@ public class MessageFormatterTests
         };
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, 100m, null, maxAmounts: 2);
+        var result = MessageFormatter.FormatMessage(inputs, 100m, NoRates, maxAmounts: 2);
 
         // Assert
         Assert.Equal(
@@ -214,7 +218,7 @@ public class MessageFormatterTests
         };
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, 100m, 25m, maxAmounts: 1);
+        var result = MessageFormatter.FormatMessage(inputs, 100m, Rate(Currency.Eur, 25m), maxAmounts: 1);
 
         // Assert
         Assert.Contains("> 20 eur", result);
@@ -232,7 +236,7 @@ public class MessageFormatterTests
         };
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, 100m, null, maxAmounts: 1);
+        var result = MessageFormatter.FormatMessage(inputs, 100m, NoRates, maxAmounts: 1);
 
         // Assert
         Assert.Contains("> 250 kc", result);
@@ -250,10 +254,83 @@ public class MessageFormatterTests
         };
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, 100m, null, maxAmounts: 1);
+        var result = MessageFormatter.FormatMessage(inputs, 100m, NoRates, maxAmounts: 1);
 
         // Assert
         Assert.Contains("> 250 kc", result);
         Assert.DoesNotContain("250,-", result);
+    }
+
+    [Theory]
+    [InlineData(Currency.Eur, "za jedno euro.")]
+    [InlineData(Currency.Usd, "za jeden dolar.")]
+    [InlineData(Currency.Gbp, "za jednu libru.")]
+    [InlineData(Currency.Pln, "za jeden zlotý.")]
+    public void FormatMessage_WithForeignCurrency_NamesTheCurrencyInExchangeRateNote(Currency currency, string expectedEnding)
+    {
+        // Arrange
+        var inputs = new[] { new UserInput(10m, currency, "10 jednotek") };
+
+        // Act
+        var result = MessageFormatter.FormatMessage(inputs, 100m, Rate(currency, 25m), MaxAmounts);
+
+        // Assert
+        Assert.Contains("To by stačilo na 2 dvoulitrovky Braníčka ve slevě!", result);
+        Assert.Contains("Při aktuálním směnném kurzu ve výši", result);
+        Assert.Contains(expectedEnding, result);
+    }
+
+    [Fact]
+    public void FormatMessage_WithCzkInput_HasNoExchangeRateNote()
+    {
+        // Arrange
+        var inputs = new[] { new UserInput(250m, Currency.Czk, "250 kc") };
+
+        // Act
+        var result = MessageFormatter.FormatMessage(inputs, 100m, Rate(Currency.Eur, 25m), MaxAmounts);
+
+        // Assert
+        Assert.DoesNotContain("směnném kurzu", result);
+    }
+
+    [Fact]
+    public void FormatMessage_WithRateForAnotherCurrencyOnly_SkipsTheAmount()
+    {
+        // Arrange
+        var inputs = new[] { new UserInput(10m, Currency.Usd, "10 usd") };
+
+        // Act
+        var result = MessageFormatter.FormatMessage(inputs, 100m, Rate(Currency.Eur, 25m), MaxAmounts);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void FormatMessage_WithSeveralForeignCurrencies_ConvertsEachWithItsOwnRate()
+    {
+        // Arrange
+        var inputs = new[]
+        {
+            new UserInput(100m, Currency.Pln, "100 zł"), // 600 CZK
+            new UserInput(20m, Currency.Usd, "20 usd"), // 400 CZK
+            new UserInput(10m, Currency.Gbp, "10 liber") // 300 CZK
+        };
+        var exchangeRates = new Dictionary<Currency, decimal>
+        {
+            [Currency.Pln] = 6m,
+            [Currency.Usd] = 20m,
+            [Currency.Gbp] = 30m
+        };
+
+        // Act
+        var result = MessageFormatter.FormatMessage(inputs, 100m, exchangeRates, maxAmounts: 2);
+
+        // Assert
+        Assert.Contains("> 100 zł", result);
+        Assert.Contains("To by stačilo na 6 dvoulitrovek", result);
+        Assert.Contains("> 20 usd", result);
+        Assert.Contains("To by stačilo na 4 dvoulitrovky", result);
+        Assert.DoesNotContain("10 liber", result);
     }
 }

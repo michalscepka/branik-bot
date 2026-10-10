@@ -25,9 +25,9 @@
 
 ## Features
 
--   **Price Detection**: Parses messages for money amounts in CZK and EUR.
+-   **Price Detection**: Parses messages for money amounts in CZK, EUR, USD, GBP and PLN.
 -   **Market Comparison**: Calculates how many Braník 2l bottles, parcels or pallets the amount would buy at the current shop price.
--   **Sampled Prices**: The shop price and the EUR exchange rate are fetched in the background, so a reply never waits for an HTTP call. If a fetch fails, the last real value stays in use.
+-   **Sampled Prices**: The shop price and the exchange rates are fetched in the background, so a reply never waits for an HTTP call. If a fetch fails, the last real value stays in use.
 -   **Price History**: Every price change is stored in a SQLite file that survives restarts.
 -   **Not Spammy**: Replies only to some messages, by chance, keeps a cooldown for the whole server after each reply and answers only the largest amount in a message.
 -   **Ask on Purpose**: Mention the bot with an amount and it always answers. Reply to someone else's message with just a mention and it answers for that message.
@@ -87,7 +87,7 @@ Optional settings, with their defaults from `appsettings.json`:
 | `Discord__ReplyChance` | `0.25` | Chance that a message with an amount gets a reply (0-1). |
 | `Discord__MaxAmountsPerReply` | `1` | How many amounts from one message get an answer, largest first (1-10). |
 | `Market__SampleInterval` | `06:00:00` | How often the shop price is fetched. |
-| `ExchangeRate__SampleInterval` | `06:00:00` | How often the EUR exchange rate is fetched. |
+| `ExchangeRate__SampleInterval` | `06:00:00` | How often the exchange rates are fetched. |
 | `Database__Path` | `data/branik.db` | Location of the SQLite file. |
 
 ### 3. Run with Docker
