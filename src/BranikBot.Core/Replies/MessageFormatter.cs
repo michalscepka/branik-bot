@@ -42,7 +42,11 @@ public static class MessageFormatter
         var (branikCount, parcelCount, palletsCount) = BranikCalculator.CalculateAmounts(valueInCzk, marketPrice);
 
         if (branikCount <= 0)
-            return string.Format(Pick(Messages.InsufficientFunds, random), userInput.OriginalText);
+        {
+            var apology = string.Format(Pick(Messages.InsufficientFunds, random), userInput.OriginalText);
+            var missingFact = ExtraFacts.ForInsufficientFunds(valueInCzk, marketPrice);
+            return missingFact is null ? apology : $"{apology} {missingFact}";
+        }
 
         if (branikCount >= 100_000)
             return Pick(Messages.TooRich, random);
@@ -58,6 +62,7 @@ public static class MessageFormatter
         };
 
         var line = string.Format(Pick(Messages.Conversion, random), quantity);
+        line += " " + Pick(ExtraFacts.ForConversion(branikCount, valueInCzk, marketPrice), random);
 
         if (userInput.Currency is not Currency.Czk)
             line += string.Format(Messages.ExchangeRateNote, exchangeRate, Messages.GetOneUnit(userInput.Currency));

@@ -7,6 +7,7 @@ namespace BranikBot.Tests.Replies;
 public class MessageFormatterTests
 {
     private const int MaxAmounts = 10;
+    private const int FirstFact = 0;
 
     private static readonly Dictionary<Currency, decimal> NoRates = [];
 
@@ -198,10 +199,10 @@ public class MessageFormatterTests
         Assert.Equal(
             """
             > 900 kc
-            To by stačilo na 9 dvoulitrovek Braníčka ve slevě!
+            To by stačilo na 9 dvoulitrovek Braníčka ve slevě! Do další ti chybí 100,00 Kč.
 
             > 400 kc
-            To by stačilo na 4 dvoulitrovky Braníčka ve slevě!
+            To by stačilo na 4 dvoulitrovky Braníčka ve slevě! Do další ti chybí 100,00 Kč.
 
 
             """.ReplaceLineEndings(), result);
@@ -345,10 +346,10 @@ public class MessageFormatterTests
         var inputs = new[] { new UserInput(250m, Currency.Czk, "250 kc") };
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, 100m, NoRates, MaxAmounts, new FixedPickRandom(pick));
+        var result = MessageFormatter.FormatMessage(inputs, 100m, NoRates, MaxAmounts, new FixedPickRandom(pick, FirstFact));
 
         // Assert
-        Assert.Equal(Reply("250 kc", expectedLine), result);
+        Assert.Equal(Reply("250 kc", expectedLine + " Do další ti chybí 50,00 Kč."), result);
     }
 
     [Theory]
@@ -362,10 +363,10 @@ public class MessageFormatterTests
         var inputs = new[] { new UserInput(12_000m, Currency.Czk, "12k") };
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, 100m, NoRates, MaxAmounts, new FixedPickRandom(pick));
+        var result = MessageFormatter.FormatMessage(inputs, 100m, NoRates, MaxAmounts, new FixedPickRandom(pick, FirstFact));
 
         // Assert
-        Assert.Equal(Reply("12k", expectedLine), result);
+        Assert.Equal(Reply("12k", expectedLine + " Do další ti chybí 100,00 Kč."), result);
     }
 
     [Theory]
@@ -379,10 +380,10 @@ public class MessageFormatterTests
         var inputs = new[] { new UserInput(120_000m, Currency.Czk, "120k") };
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, 100m, NoRates, MaxAmounts, new FixedPickRandom(pick));
+        var result = MessageFormatter.FormatMessage(inputs, 100m, NoRates, MaxAmounts, new FixedPickRandom(pick, FirstFact));
 
         // Assert
-        Assert.Equal(Reply("120k", expectedLine), result);
+        Assert.Equal(Reply("120k", expectedLine + " Do další ti chybí 100,00 Kč."), result);
     }
 
     [Theory]
@@ -395,10 +396,10 @@ public class MessageFormatterTests
         var inputs = new[] { new UserInput(5m, Currency.Czk, "5 kc") };
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, 100m, NoRates, MaxAmounts, new FixedPickRandom(pick));
+        var result = MessageFormatter.FormatMessage(inputs, 100m, NoRates, MaxAmounts, new FixedPickRandom(pick, FirstFact));
 
         // Assert
-        Assert.Equal(Reply("5 kc", expectedLine), result);
+        Assert.Equal(Reply("5 kc", expectedLine + " Chybí ti ještě 95,00 Kč."), result);
     }
 
     [Theory]
@@ -411,7 +412,7 @@ public class MessageFormatterTests
         var inputs = new[] { new UserInput(20_000_000m, Currency.Czk, "20 mega") };
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, 100m, NoRates, MaxAmounts, new FixedPickRandom(pick));
+        var result = MessageFormatter.FormatMessage(inputs, 100m, NoRates, MaxAmounts, new FixedPickRandom(pick, FirstFact));
 
         // Assert
         Assert.Equal(Reply("20 mega", expectedLine), result);
@@ -429,30 +430,105 @@ public class MessageFormatterTests
 
         // Act
         var result = MessageFormatter.FormatMessage(inputs, 100m, Rate(Currency.Eur, 25m), MaxAmounts,
-            new FixedPickRandom(pick));
+            new FixedPickRandom(pick, FirstFact));
 
         // Assert
-        Assert.Contains("2 dvoulitrovky Braníčka ve slevě! Při aktuálním směnném kurzu ve výši", result);
+        Assert.Contains("2 dvoulitrovky Braníčka ve slevě! Do další ti chybí 50,00 Kč. Při aktuálním směnném kurzu ve výši", result);
         Assert.EndsWith("za jedno euro." + Environment.NewLine + Environment.NewLine, result);
     }
 
     [Fact]
-    public void FormatMessage_WithRealRandom_UsesEveryPhrasingAndNothingElse()
+    public void FormatMessage_WithRealRandom_UsesEveryPhrasingWithEveryFactAndNothingElse()
     {
         // Arrange
         var inputs = new[] { new UserInput(250m, Currency.Czk, "250 kc") };
         var random = new Random(12345);
+        string[] facts =
+        [
+            "Do další ti chybí 50,00 Kč.",
+            "Půllitr tě tak vyjde na 25,00 Kč.",
+            "Na další balík potřebuješ ještě 4 dvoulitrovky.",
+            "A ještě ti zbyde 50,00 Kč."
+        ];
         var expectedReplies = Messages.Conversion
-            .Select(phrasing => Reply("250 kc", string.Format(phrasing, "2 dvoulitrovky")))
+            .SelectMany(phrasing => facts.Select(fact => Reply("250 kc", $"{string.Format(phrasing, "2 dvoulitrovky")} {fact}")))
             .ToHashSet();
 
         // Act
-        var replies = Enumerable.Range(0, 200)
+        var replies = Enumerable.Range(0, 1000)
             .Select(_ => MessageFormatter.FormatMessage(inputs, 100m, NoRates, MaxAmounts, random))
             .ToHashSet();
 
         // Assert
         Assert.Equal(expectedReplies, replies);
+    }
+
+    [Theory]
+    [InlineData(0, "Do další ti chybí 50,00 Kč.")]
+    [InlineData(1, "Půllitr tě tak vyjde na 25,00 Kč.")]
+    [InlineData(2, "Na další balík potřebuješ ještě 4 dvoulitrovky.")]
+    [InlineData(3, "A ještě ti zbyde 50,00 Kč.")]
+    public void FormatMessage_WithBottleAmount_AddsThePickedFact(int factPick, string expectedFact)
+    {
+        // Arrange
+        var inputs = new[] { new UserInput(250m, Currency.Czk, "250 kc") };
+
+        // Act
+        var result = MessageFormatter.FormatMessage(inputs, 100m, NoRates, MaxAmounts, new FixedPickRandom(0, factPick));
+
+        // Assert
+        Assert.Equal(Reply("250 kc", "To by stačilo na 2 dvoulitrovky Braníčka ve slevě! " + expectedFact), result);
+    }
+
+    [Fact]
+    public void FormatMessage_WithSeveralAmounts_PicksPhrasingAndFactForEachAnswer()
+    {
+        // Arrange
+        var inputs = new[]
+        {
+            new UserInput(900m, Currency.Czk, "900 kc"),
+            new UserInput(400m, Currency.Czk, "400 kc")
+        };
+        var random = new FixedPickRandom(1, 2, 3, 0);
+
+        // Act
+        var result = MessageFormatter.FormatMessage(inputs, 100m, NoRates, MaxAmounts, random);
+
+        // Assert
+        Assert.Equal(
+            Reply("900 kc", "Za to máš 9 dvoulitrovek Braníčka ve slevě! Na další balík potřebuješ ještě 3 dvoulitrovky.") +
+            Reply("400 kc", "Přepočteno na jedinou tvrdou měnu to dělá 4 dvoulitrovky Braníčka ve slevě! Do další ti chybí 100,00 Kč."),
+            result);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void FormatMessage_WithHugeAmount_AddsNoFact(int pick)
+    {
+        // Arrange
+        var inputs = new[] { new UserInput(20_000_000m, Currency.Czk, "20 mega") };
+
+        // Act
+        var result = MessageFormatter.FormatMessage(inputs, 100m, NoRates, MaxAmounts, new FixedPickRandom(pick));
+
+        // Assert
+        Assert.Equal(Reply("20 mega", Messages.TooRich[pick]), result);
+    }
+
+    [Fact]
+    public void FormatMessage_WithForeignCurrencyTooSmall_AddsMissingAmountInCzk()
+    {
+        // Arrange
+        var inputs = new[] { new UserInput(1m, Currency.Eur, "1 euro") };
+
+        // Act
+        var result = MessageFormatter.FormatMessage(inputs, 100m, Rate(Currency.Eur, 25m), MaxAmounts,
+            FixedPickRandom.First);
+
+        // Assert
+        Assert.Contains("Chybí ti ještě 75,00 Kč.", result);
     }
 
     private static string Reply(string quotedText, string line)

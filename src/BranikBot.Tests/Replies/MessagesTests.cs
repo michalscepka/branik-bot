@@ -63,6 +63,25 @@ public class MessagesTests
         Assert.Equal(expected, Messages.GetOneUnit(currency));
     }
 
+    [Theory]
+    [InlineData(Messages.ChangeFact, 1)]
+    [InlineData(Messages.NextBottleFact, 1)]
+    [InlineData(Messages.HalfLitreFact, 1)]
+    [InlineData(Messages.MissingFact, 1)]
+    [InlineData(Messages.NextParcelFact, 2)]
+    [InlineData(Messages.NextPalletFact, 2)]
+    public void Fact_Any_UsesEachOfItsPlaceholdersOnce(string fact, int placeholderCount)
+    {
+        // Act
+        var formatted = string.Format(fact, "<first>", "<second>");
+
+        // Assert
+        Assert.Equal(1, CountOf("<first>", formatted));
+        Assert.Equal(placeholderCount - 1, CountOf("<second>", formatted));
+        Assert.DoesNotContain("{", formatted);
+        Assert.EndsWith(".", formatted);
+    }
+
     [Fact]
     public void GetOneUnit_HomeCurrency_Throws()
     {

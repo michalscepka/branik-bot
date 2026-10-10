@@ -30,6 +30,20 @@ public static class Messages
         "Tolik Braníčka nemají ani ve skladu. Kup si rovnou pivovar!"
     ];
 
+    // One extra fact follows every conversion, picked at random from those that apply. See ExtraFacts.
+    // A fact says something the main sentence does not, so it comes from the money or the price,
+    // never from the bottle count alone.
+
+    // {0} is an amount of money. Like the exchange rate note, it is formatted by the app's culture (cs-CZ).
+    public const string ChangeFact = "A ještě ti zbyde {0:C2}.";
+    public const string NextBottleFact = "Do další ti chybí {0:C2}.";
+    public const string HalfLitreFact = "Půllitr tě tak vyjde na {0:C2}.";
+    public const string MissingFact = "Chybí ti ještě {0:C2}.";
+
+    // {0} is a count and {1} the matching form of the word after it, in the accusative.
+    public const string NextParcelFact = "Na další balík potřebuješ ještě {0} {1}.";
+    public const string NextPalletFact = "Na další europaletu potřebuješ ještě {0} {1}.";
+
     public const string ExchangeRateNote = " Při aktuálním směnném kurzu ve výši {0:C2} za {1}.";
 
     // One unit of a foreign currency, as it reads after "za" in the exchange rate note.
