@@ -38,11 +38,11 @@ public class ExchangeRateSamplerTests
     }
 
     [Fact]
-    public async Task SampleAsync_ProviderReturnsZero_KeepsLastRate()
+    public async Task SampleAsync_ProviderReturnsNoRate_KeepsLastRate()
     {
         // Arrange
         _latestExchangeRate.Set(Currency.Eur, 24.340m);
-        _providerMock.Setup(p => p.GetExchangeRateAsync(Currency.Eur)).ReturnsAsync(0m);
+        _providerMock.Setup(p => p.GetExchangeRateAsync(Currency.Eur)).ReturnsAsync((decimal?)null);
 
         // Act
         await _sampler.SampleAsync();
@@ -52,10 +52,10 @@ public class ExchangeRateSamplerTests
     }
 
     [Fact]
-    public async Task SampleAsync_ProviderReturnsZeroWithNoRate_SetsNothing()
+    public async Task SampleAsync_ProviderReturnsNoRateWithNoRate_SetsNothing()
     {
         // Arrange
-        _providerMock.Setup(p => p.GetExchangeRateAsync(Currency.Eur)).ReturnsAsync(0m);
+        _providerMock.Setup(p => p.GetExchangeRateAsync(Currency.Eur)).ReturnsAsync((decimal?)null);
 
         // Act
         await _sampler.SampleAsync();

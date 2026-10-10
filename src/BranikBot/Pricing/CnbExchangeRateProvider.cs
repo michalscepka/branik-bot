@@ -13,7 +13,7 @@ public class CnbExchangeRateProvider(
 {
     private readonly ExchangeRateConfiguration _configuration = configuration.Value;
 
-    public async ValueTask<decimal> GetExchangeRateAsync(Currency currency)
+    public async ValueTask<decimal?> GetExchangeRateAsync(Currency currency)
     {
         if (currency is Currency.Czk)
             return 1m;
@@ -21,7 +21,7 @@ public class CnbExchangeRateProvider(
         return await FetchExchangeRateAsync();
     }
 
-    private async Task<decimal> FetchExchangeRateAsync()
+    private async Task<decimal?> FetchExchangeRateAsync()
     {
         try
         {
@@ -53,6 +53,6 @@ public class CnbExchangeRateProvider(
             logger.LogError(ex, "Failed to fetch exchange rate from {Url}", _configuration.Url);
         }
 
-        return 0m;
+        return null;
     }
 }

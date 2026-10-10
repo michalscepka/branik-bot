@@ -79,7 +79,7 @@ public class CnbExchangeRateProviderTests
     }
 
     [Fact]
-    public async Task GetExchangeRateAsync_RequestFails_ReturnsZero()
+    public async Task GetExchangeRateAsync_RequestFails_ReturnsNull()
     {
         // Arrange
         _httpMessageHandlerMock.Protected()
@@ -96,7 +96,7 @@ public class CnbExchangeRateProviderTests
         var rate = await service.GetExchangeRateAsync(Currency.Eur);
 
         // Assert
-        Assert.Equal(0m, rate);
+        Assert.Null(rate);
     }
 
     private void SetupHttpResponse(string content)

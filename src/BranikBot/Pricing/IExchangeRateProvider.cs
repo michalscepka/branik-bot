@@ -2,5 +2,5 @@ namespace BranikBot.Pricing;
 
 public interface IExchangeRateProvider
 {
-    ValueTask<decimal> GetExchangeRateAsync(Currency currency);
+    ValueTask<decimal?> GetExchangeRateAsync(Currency currency);
 }

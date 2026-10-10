@@ -27,10 +27,10 @@ public class ExchangeRateSampler(
         try
         {
             var rate = await exchangeRateProvider.GetExchangeRateAsync(Currency.Eur);
-            if (rate <= 0)
+            if (rate is not > 0)
                 return;
 
-            latestExchangeRate.Set(Currency.Eur, rate);
+            latestExchangeRate.Set(Currency.Eur, rate.Value);
         }
         catch (Exception ex)
         {
