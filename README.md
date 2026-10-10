@@ -29,7 +29,7 @@
 -   **Market Comparison**: Calculates how many Braník 2l bottles, parcels or pallets the amount would buy at the current shop price.
 -   **Sampled Prices**: The shop price and the exchange rates are fetched in the background, so a reply never waits for an HTTP call. If a fetch fails, the last real value stays in use.
 -   **Price History**: Every price change is stored in a SQLite file that survives restarts.
--   **Not Spammy**: Replies only to some messages, by chance, keeps a cooldown for the whole server after each reply and answers only the largest amount in a message.
+-   **Not Spammy**: Replies only to some messages, by chance (the rest get a 🍺 reaction), keeps a cooldown for the whole server after each reply and answers only the largest amount in a message.
 -   **Ask on Purpose**: Mention the bot with an amount and it always answers. Reply to someone else's message with just a mention and it answers for that message.
 -   **Trusted Bots**: Other bots are ignored by default. A server admin picks the ones to read with a slash command.
 -   **Dockerized**: Ready-to-use `docker-compose` setup for both production and local development.
@@ -47,6 +47,8 @@ All commands need the **Manage Server** permission and answer only to the admin 
 | `/branik-config bot-list` | List the bots whose messages are read on this server. |
 
 Messages written by people are always read. The list is kept per server.
+
+The bot needs **Read Message History** to answer as a Discord reply and **Add Reactions** for the 🍺 reaction. Without either it keeps working: answers are sent as plain messages and reactions are skipped.
 
 ---
 

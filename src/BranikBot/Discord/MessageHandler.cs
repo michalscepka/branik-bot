@@ -16,6 +16,9 @@ public class MessageHandler(
     ReplyChance replyChance,
     ILogger<MessageHandler> logger)
 {
+    // Put on a message that had an amount but lost the reply chance, to show the bot noticed it.
+    private static readonly ReactionEmojiProperties SkippedReaction = new("🍺");
+
     public async ValueTask ProcessIncomingMessage(Message message)
     {
         // Check if message is from Branik Bot
@@ -49,8 +52,18 @@ public class MessageHandler(
                 return;
             }
 
-            if (!isMentioned && !PassesChanceAndCooldown(message, guildId))
+            if (!isMentioned && !replyChance.Roll())
+            {
+                logger.LogInformation("Reply chance skipped message {MessageId} in guild {GuildId}.", message.Id, guildId);
+                await AddSkippedReactionAsync(message);
                 return;
+            }
+
+            if (!isMentioned && !replyCooldown.TryStart(guildId))
+            {
+                logger.LogInformation("Cooldown active for guild {GuildId}, skipping reply to message {MessageId}.", guildId, message.Id);
+                return;
+            }
 
             logger.LogInformation(
                 "Replying to message {MessageId} in channel {ChannelId} of guild {GuildId} (mentioned: {IsMentioned}).",
@@ -84,21 +97,18 @@ public class MessageHandler(
         return replyBuilder.Build(content);
     }
 
-    private bool PassesChanceAndCooldown(Message message, ulong guildId)
+    private async ValueTask AddSkippedReactionAsync(Message message)
     {
-        if (!replyChance.Roll())
+        try
         {
-            logger.LogInformation("Reply chance skipped message {MessageId} in guild {GuildId}.", message.Id, guildId);
-            return false;
+            await gatewayClient.Rest.AddMessageReactionAsync(message.ChannelId, message.Id, SkippedReaction);
         }
-
-        if (!replyCooldown.TryStart(guildId))
+        catch (RestException ex) when (ex.StatusCode is HttpStatusCode.Forbidden)
         {
-            logger.LogInformation("Cooldown active for guild {GuildId}, skipping reply to message {MessageId}.", guildId, message.Id);
-            return false;
+            // Reacting needs the Add Reactions permission. A server that withholds it simply gets no reactions,
+            // so this is not worth a warning on every skipped message.
+            logger.LogDebug("Not allowed to react to message {MessageId} in channel {ChannelId}.", message.Id, message.ChannelId);
         }
-
-        return true;
     }
 
     private async ValueTask SendReplyAsync(Message message, string reply)
