@@ -6,11 +6,13 @@ namespace BranikBot.Tests.Replies;
 
 public class MessageFormatterTests
 {
+    private const int MaxAmounts = 10;
+
     [Fact]
     public void FormatMessage_WithEmptyInputs_ReturnsEmptyString()
     {
         // Act
-        var result = MessageFormatter.FormatMessage([], 100m, null);
+        var result = MessageFormatter.FormatMessage([], 100m, null, MaxAmounts);
 
         // Assert
         Assert.Empty(result);
@@ -24,7 +26,7 @@ public class MessageFormatterTests
         var marketPrice = 100m;
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, marketPrice, null);
+        var result = MessageFormatter.FormatMessage(inputs, marketPrice, null, MaxAmounts);
 
         // Assert
         Assert.Contains("Lítost má v srdci, ale 50 kc nepostačí ani na jednu číši Braníčka plastového ve slevě.", result);
@@ -38,7 +40,7 @@ public class MessageFormatterTests
         var marketPrice = 100m; // 2 bottles
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, marketPrice, null);
+        var result = MessageFormatter.FormatMessage(inputs, marketPrice, null, MaxAmounts);
 
         // Assert
         Assert.Contains("To by stačilo na 2 dvoulitrovky Braníčka ve slevě!", result);
@@ -52,7 +54,7 @@ public class MessageFormatterTests
         var marketPrice = 100m; // 120 bottles = 20 parcels
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, marketPrice, null);
+        var result = MessageFormatter.FormatMessage(inputs, marketPrice, null, MaxAmounts);
 
         // Assert
         Assert.Contains("To by stačilo na 20 baliku (120 dvoulitrovek) Braníčka ve slevě!", result);
@@ -66,7 +68,7 @@ public class MessageFormatterTests
         var marketPrice = 100m; // 1200 bottles = 200 parcels = 2 pallets
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, marketPrice, null);
+        var result = MessageFormatter.FormatMessage(inputs, marketPrice, null, MaxAmounts);
 
         // Assert
         Assert.Contains("To by stačilo na 2 europalety (200 baliku) dvoulitrovek Braníčka ve slevě!", result);
@@ -80,7 +82,7 @@ public class MessageFormatterTests
         var marketPrice = 100m; // 200,000 bottles > 100,000
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, marketPrice, null);
+        var result = MessageFormatter.FormatMessage(inputs, marketPrice, null, MaxAmounts);
 
         // Assert
         Assert.Contains("Za tolik by sis mohl koupit rovnou celý Plzeňský Prazdroj!", result);
@@ -95,7 +97,7 @@ public class MessageFormatterTests
         var exchangeRate = 25m; // 10 EUR * 25 = 250 CZK = 2 bottles
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, marketPrice, exchangeRate);
+        var result = MessageFormatter.FormatMessage(inputs, marketPrice, exchangeRate, MaxAmounts);
 
         // Assert
         Assert.Contains("To by stačilo na 2 dvoulitrovky Braníčka ve slevě!", result);
@@ -117,7 +119,7 @@ public class MessageFormatterTests
         var exchangeRate = 25m;
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, marketPrice, exchangeRate);
+        var result = MessageFormatter.FormatMessage(inputs, marketPrice, exchangeRate, MaxAmounts);
 
         // Assert
         Assert.Contains("> 250 kc", result);
@@ -133,7 +135,7 @@ public class MessageFormatterTests
         var inputs = new[] { new UserInput(10m, Currency.Eur, "10 eur") };
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, 100m, null);
+        var result = MessageFormatter.FormatMessage(inputs, 100m, null, MaxAmounts);
 
         // Assert
         Assert.Empty(result);
@@ -150,10 +152,91 @@ public class MessageFormatterTests
         };
 
         // Act
-        var result = MessageFormatter.FormatMessage(inputs, 100m, null);
+        var result = MessageFormatter.FormatMessage(inputs, 100m, null, MaxAmounts);
 
         // Assert
         Assert.Contains("> 250 kc", result);
         Assert.DoesNotContain("10 eur", result);
+    }
+
+    [Fact]
+    public void FormatMessage_WithMoreInputsThanMaximum_ReturnsOnlyTheLargest()
+    {
+        // Arrange
+        var inputs = new[]
+        {
+            new UserInput(250m, Currency.Czk, "250 kc"),
+            new UserInput(900m, Currency.Czk, "900 kc"),
+            new UserInput(400m, Currency.Czk, "400 kc")
+        };
+
+        // Act
+        var result = MessageFormatter.FormatMessage(inputs, 100m, null, maxAmounts: 2);
+
+        // Assert
+        Assert.Equal(
+            """
+            > 900 kc
+            To by stačilo na 9 dvoulitrovek Braníčka ve slevě!
+
+            > 400 kc
+            To by stačilo na 4 dvoulitrovky Braníčka ve slevě!
+
+
+            """.ReplaceLineEndings(), result);
+    }
+
+    [Fact]
+    public void FormatMessage_WithEurLargerThanCzkAfterConversion_PicksTheEurAmount()
+    {
+        // Arrange
+        var inputs = new[]
+        {
+            new UserInput(250m, Currency.Czk, "250 kc"),
+            new UserInput(20m, Currency.Eur, "20 eur")
+        };
+
+        // Act
+        var result = MessageFormatter.FormatMessage(inputs, 100m, 25m, maxAmounts: 1);
+
+        // Assert
+        Assert.Contains("> 20 eur", result);
+        Assert.DoesNotContain("250 kc", result);
+    }
+
+    [Fact]
+    public void FormatMessage_WithLargestEurAndNoExchangeRate_FallsBackToCzkAmount()
+    {
+        // Arrange
+        var inputs = new[]
+        {
+            new UserInput(250m, Currency.Czk, "250 kc"),
+            new UserInput(1000m, Currency.Eur, "1000 eur")
+        };
+
+        // Act
+        var result = MessageFormatter.FormatMessage(inputs, 100m, null, maxAmounts: 1);
+
+        // Assert
+        Assert.Contains("> 250 kc", result);
+        Assert.DoesNotContain("1000 eur", result);
+    }
+
+    [Fact]
+    public void FormatMessage_WithEqualAmounts_KeepsTheOneMentionedFirst()
+    {
+        // Arrange
+        var inputs = new[]
+        {
+            new UserInput(250m, Currency.Czk, "250 kc"),
+            new UserInput(250m, Currency.Czk, "250,-")
+        };
+
+        // Act
+        var result = MessageFormatter.FormatMessage(inputs, 100m, null, maxAmounts: 1);
+
+        // Assert
+        Assert.Contains("> 250 kc", result);
+        Assert.DoesNotContain("250,-", result);
     }
 }

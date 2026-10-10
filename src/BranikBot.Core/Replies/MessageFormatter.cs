@@ -6,21 +6,22 @@ namespace BranikBot.Replies;
 
 public static class MessageFormatter
 {
-    // EUR amounts are left out when no exchange rate is known.
     public static string FormatMessage(IEnumerable<UserInput> userInputs, decimal marketPrice,
-        decimal? euroExchangeRate)
+        decimal? euroExchangeRate, int maxAmounts)
     {
+        var largest = userInputs
+            .Select(input => (Input: input, ExchangeRate: input.Currency is Currency.Eur ? euroExchangeRate : 1m))
+            .Where(x => x.ExchangeRate is not null)
+            .Select(x => (x.Input, ExchangeRate: x.ExchangeRate.GetValueOrDefault()))
+            .OrderByDescending(x => x.Input.Amount * x.ExchangeRate)
+            .Take(maxAmounts);
+
         var result = new StringBuilder();
 
-        foreach (var input in userInputs)
+        foreach (var (input, exchangeRate) in largest)
         {
-            var exchangeRate = input.Currency is Currency.Eur ? euroExchangeRate : 1m;
-            if (exchangeRate is null)
-                continue;
-
             result.AppendLine($"> {input.OriginalText}");
-            result.AppendLine(CreateMessageLine(input, input.Amount * exchangeRate.Value, marketPrice,
-                exchangeRate.Value));
+            result.AppendLine(CreateMessageLine(input, input.Amount * exchangeRate, marketPrice, exchangeRate));
             result.AppendLine();
         }
 

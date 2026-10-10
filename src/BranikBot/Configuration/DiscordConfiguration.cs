@@ -12,4 +12,7 @@ public class DiscordConfiguration
 
     [Required]
     public TimeSpan ChannelCooldown { get; [UsedImplicitly] set; }
+
+    [Range(1, 10)]
+    public int MaxAmountsPerReply { get; [UsedImplicitly] set; }
 }

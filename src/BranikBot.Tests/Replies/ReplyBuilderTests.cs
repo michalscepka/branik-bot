@@ -1,8 +1,10 @@
+using BranikBot.Configuration;
 using BranikBot.Persistence;
 using BranikBot.Pricing;
 using BranikBot.Replies;
 using BranikBot.Tests.Persistence;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace BranikBot.Tests.Replies;
@@ -19,10 +21,17 @@ public sealed class ReplyBuilderTests : IDisposable
     public ReplyBuilderTests()
     {
         _priceHistoryStore = new PriceHistoryStore(_database.Create());
-        _builder = new ReplyBuilder(_priceHistoryStore, _latestExchangeRate, Mock.Of<ILogger<ReplyBuilder>>());
+        _builder = CreateBuilder(maxAmounts: 10);
     }
 
     public void Dispose() => _database.Dispose();
+
+    private ReplyBuilder CreateBuilder(int maxAmounts)
+    {
+        var configuration = new DiscordConfiguration { MaxAmountsPerReply = maxAmounts };
+        return new ReplyBuilder(_priceHistoryStore, _latestExchangeRate, Options.Create(configuration),
+            Mock.Of<ILogger<ReplyBuilder>>());
+    }
 
     [Fact]
     public void Build_TextWithoutAmounts_ReturnsNull()
@@ -102,5 +111,22 @@ public sealed class ReplyBuilderTests : IDisposable
         Assert.NotNull(reply);
         Assert.Contains("> 250 kc", reply);
         Assert.DoesNotContain("10 eur", reply);
+    }
+
+    [Fact]
+    public void Build_MoreAmountsThanConfiguredMaximum_AnswersOnlyTheLargest()
+    {
+        // Arrange
+        _priceHistoryStore.Record(100m, Now);
+        var builder = CreateBuilder(maxAmounts: 1);
+
+        // Act
+        var reply = builder.Build("mam 250 kc, 900 kc a 400 kc");
+
+        // Assert
+        Assert.NotNull(reply);
+        Assert.Contains("> 900 kc", reply);
+        Assert.DoesNotContain("250 kc", reply);
+        Assert.DoesNotContain("400 kc", reply);
     }
 }
