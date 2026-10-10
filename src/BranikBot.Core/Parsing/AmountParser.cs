@@ -7,10 +7,12 @@ namespace BranikBot.Parsing;
 public static class AmountParser
 {
     private const string NumberPattern = @"\d{1,3}(\s?\d{3})*([.,]\d+)?";
+    private const string Number = "Number";
+    private const string Multiplier = "Multiplier";
     private const string CurrencySuffix = "CurrencySuffix";
-    private const string Base = "Base";
-    private const string Thousands = "Thousands";
-    private const string Millions = "Millions";
+
+    // Anything above this is answered the same way, and capping it keeps later calculations from overflowing.
+    private const decimal MaxAmount = 1_000_000_000_000_000_000m;
 
     private static readonly Dictionary<Currency, string[]> CurrencyDefinitions = new()
     {
@@ -18,17 +20,46 @@ public static class AmountParser
         { Currency.Czk, ["kc", "kč", "czk", "korun", "koruny", "koruna", ",-"] }
     };
 
-    private static readonly string CurrencySuffixPattern =
-        string.Join("|", CurrencyDefinitions.Values
-            .SelectMany(v => v)
-            .OrderByDescending(v => v.Length)
-            .Select(Regex.Escape));
+    // Words must match exactly. Abbreviations may also be followed by a dot ("tis.", "mil.").
+    private static readonly MultiplierDefinition[] MultiplierDefinitions =
+    [
+        new(1_000,
+            Words: ["k", "tisíc", "tisíce", "tisíců", "tisic", "tisice", "tisicu"],
+            Abbreviations: ["tis"]),
+        new(1_000_000,
+            Words: ["mega", "milion", "miliony", "milionů", "milionu", "milión", "milióny", "miliónů"],
+            Abbreviations: ["mil", "mio"]),
+        new(1_000_000_000,
+            Words: ["miliarda", "miliardy", "miliard"],
+            Abbreviations: ["mld"])
+    ];
 
+    private static readonly Dictionary<string, decimal> MultiplierFactors = MultiplierDefinitions
+        .SelectMany(definition => definition.Words
+            .Concat(definition.Abbreviations)
+            .Select(text => (Text: text, definition.Factor)))
+        .ToDictionary(x => x.Text, x => x.Factor, StringComparer.OrdinalIgnoreCase);
+
+    private static readonly string CurrencySuffixPattern =
+        JoinAlternatives(CurrencyDefinitions.Values.SelectMany(suffixes => suffixes));
+
+    private static readonly string MultiplierWordPattern =
+        JoinAlternatives(MultiplierDefinitions.SelectMany(definition => definition.Words));
+
+    private static readonly string MultiplierAbbreviationPattern =
+        JoinAlternatives(MultiplierDefinitions.SelectMany(definition => definition.Abbreviations));
+
+    // A number followed by a multiplier, a currency or both: "20 tisíc", "100 kč", "1,5 mil. Kč".
+    // The \b keeps a multiplier from matching the start of a longer word ("k" in "kč", "mil" in "milý").
     private static readonly string Pattern =
         $"""
-         (?<{Base}>{NumberPattern})\s*(?<{CurrencySuffix}>{CurrencySuffixPattern})|
-         (?<{Thousands}>{NumberPattern})\s*k\b(\s*(?<{CurrencySuffix}>{CurrencySuffixPattern}))?|
-         (?<{Millions}>{NumberPattern})\s*mega\b(\s*(?<{CurrencySuffix}>{CurrencySuffixPattern}))?
+         (?<{Number}>{NumberPattern})\s*
+         (?:
+             (?<{Multiplier}>(?:{MultiplierWordPattern})\b|(?:{MultiplierAbbreviationPattern})\b\.?)
+             (?:\s*(?<{CurrencySuffix}>{CurrencySuffixPattern}))?
+             |
+             (?<{CurrencySuffix}>{CurrencySuffixPattern})
+         )
          """;
 
     private static readonly Regex BranikRegex = new(
@@ -38,34 +69,45 @@ public static class AmountParser
 
     public static IEnumerable<UserInput> ExtractAmounts(this string message)
     {
-        var matches = BranikRegex.Matches(message);
         var result = new HashSet<UserInput>();
 
-        if (matches.Count is 0)
-            return result;
-
-        foreach (Match match in matches)
+        foreach (Match match in BranikRegex.Matches(message))
         {
-            var originalValue = match.Groups[0].Value;
+            var amount = TryGetAmount(match);
+            if (amount is null)
+                continue;
+
             var currency = GetCurrencyFromSuffix(match.Groups[CurrencySuffix].Value);
-
-            var amount = TryGetAmount(Base, 1, match) ??
-                         TryGetAmount(Thousands, 1_000, match) ??
-                         TryGetAmount(Millions, 1_000_000, match);
-
-            if (amount.HasValue)
-                result.Add(new UserInput(amount.Value, currency, originalValue));
+            result.Add(new UserInput(amount.Value, currency, match.Value));
         }
 
         return result;
     }
 
-    private static decimal? TryGetAmount(string groupName, decimal multiplier, Match match)
+    private static decimal? TryGetAmount(Match match)
     {
-        return match.Groups[groupName].Success &&
-               TryParseDecimal(match.Groups[groupName].Value, out var val)
-            ? val * multiplier
-            : null;
+        if (!TryParseDecimal(match.Groups[Number].Value, out var number))
+            return null;
+
+        var factor = TryGetFactor(match.Groups[Multiplier]);
+        if (factor is null)
+            return null;
+
+        return number > MaxAmount / factor.Value ? MaxAmount : number * factor.Value;
+    }
+
+    private static decimal? TryGetFactor(Group multiplier)
+    {
+        if (!multiplier.Success)
+            return 1;
+
+        var text = multiplier.Value.TrimEnd('.');
+        return MultiplierFactors.TryGetValue(text, out var factor) ? factor : null;
+    }
+
+    private static string JoinAlternatives(IEnumerable<string> texts)
+    {
+        return string.Join("|", texts.OrderByDescending(text => text.Length).Select(Regex.Escape));
     }
 
     private static Currency GetCurrencyFromSuffix(string suffix)
@@ -89,4 +131,6 @@ public static class AmountParser
         var normalized = value.Replace(" ", "").Replace(",", ".");
         return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out result);
     }
+
+    private sealed record MultiplierDefinition(decimal Factor, string[] Words, string[] Abbreviations);
 }

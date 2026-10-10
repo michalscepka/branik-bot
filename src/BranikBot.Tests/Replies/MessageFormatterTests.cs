@@ -88,6 +88,23 @@ public class MessageFormatterTests
         Assert.Contains("Za tolik by sis mohl koupit rovnou celý Plzeňský Prazdroj!", result);
     }
 
+    [Theory]
+    [InlineData(100_000_000_000)] // 100 mld, more bottles than fit into an int
+    [InlineData(1_000_000_000_000_000_000)] // The largest amount the parser produces
+    public void FormatMessage_WithMoreBottlesThanIntCanHold_ReturnsTooRichMessage(decimal amount)
+    {
+        // Arrange
+        var inputs = new[] { new UserInput(amount, Currency.Eur, "hodně eur") };
+        var marketPrice = 0.01m;
+        var euroExchangeRate = 25m;
+
+        // Act
+        var result = MessageFormatter.FormatMessage(inputs, marketPrice, euroExchangeRate, MaxAmounts);
+
+        // Assert
+        Assert.Contains("Za tolik by sis mohl koupit rovnou celý Plzeňský Prazdroj!", result);
+    }
+
     [Fact]
     public void FormatMessage_WithEurInput_ReturnsMessageWithExchangeRateNote()
     {

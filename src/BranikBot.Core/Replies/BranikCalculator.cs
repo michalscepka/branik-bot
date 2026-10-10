@@ -7,7 +7,7 @@ public static class BranikCalculator
 
     public static (int BranikCount, int ParcelCount, int PalletsCount) CalculateAmounts(decimal amount, decimal branikPrice)
     {
-        var branikCount = (int)(amount / branikPrice);
+        var branikCount = (int)Math.Min(amount / branikPrice, int.MaxValue);
         var parcelCount = branikCount / ParcelSize;
         var palletsCount = parcelCount / PalletSize;
         return (branikCount, parcelCount, palletsCount);
