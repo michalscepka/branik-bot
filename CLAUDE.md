@@ -59,7 +59,7 @@ All DI registration is in `ServiceCollectionExtensions.AddBranikBot()` in the ho
 5. Per-channel cooldown (`Discord:ChannelCooldown`) is the in-memory singleton `ChannelCooldown`. `TryStart` checks and starts it in one step, only after a reply was built and before it is sent, so a failed send still starts the cooldown.
 6. `MessageFormatter` (static, no dependencies) converts EUR with the rate it is given and leaves EUR amounts out when there is none, so a message with only EUR amounts gets no reply. It picks the reply tier by bottle count: bottles (<100), parcels (<1000), pallets (<100 000), otherwise the "too rich" message. Czech plural forms come from the `extension(int)` block in `StringExtensions`.
 
-Both providers are typed `HttpClient`s and are only called by the samplers.
+Both providers are typed `HttpClient`s and are only called by the samplers, which hold them for the whole process. Their handler is therefore registered with an infinite handler lifetime and a `PooledConnectionLifetime` of 2 minutes, so DNS changes are still picked up. Register any new long-lived client the same way (`ConfigureLongLivedClient`).
 
 ### Sampled prices
 

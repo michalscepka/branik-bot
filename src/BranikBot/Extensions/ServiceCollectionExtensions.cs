@@ -13,6 +13,8 @@ namespace BranikBot.Extensions;
 
 public static class ServiceCollectionExtensions
 {
+    private static readonly TimeSpan PooledConnectionLifetime = TimeSpan.FromMinutes(2);
+
     public static IServiceCollection AddBranikBot(this IServiceCollection services)
     {
         services.AddOptions<DiscordConfiguration>()
@@ -41,9 +43,8 @@ public static class ServiceCollectionExtensions
             opt.Intents = GatewayIntents.GuildMessages | GatewayIntents.MessageContent;
         });
 
-        services.AddHttpClient();
-        services.AddHttpClient<IMarketPriceProvider, AkcniCenyProvider>();
-        services.AddHttpClient<IExchangeRateProvider, CnbExchangeRateProvider>();
+        ConfigureLongLivedClient(services.AddHttpClient<IMarketPriceProvider, AkcniCenyProvider>());
+        ConfigureLongLivedClient(services.AddHttpClient<IExchangeRateProvider, CnbExchangeRateProvider>());
 
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton(sp =>
@@ -62,5 +63,14 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<DiscordBackgroundService>();
 
         return services;
+    }
+
+    // The providers are held by background services for the whole process, so the factory never
+    // rotates their handler. Recycling pooled connections keeps DNS changes visible instead.
+    private static void ConfigureLongLivedClient(IHttpClientBuilder builder)
+    {
+        builder
+            .UseSocketsHttpHandler((handler, _) => handler.PooledConnectionLifetime = PooledConnectionLifetime)
+            .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
     }
 }
