@@ -7,7 +7,7 @@ namespace BranikBot.Replies;
 public static class MessageFormatter
 {
     public static string FormatMessage(IEnumerable<UserInput> userInputs, decimal marketPrice,
-        IReadOnlyDictionary<Currency, decimal> exchangeRates, int maxAmounts)
+        IReadOnlyDictionary<Currency, decimal> exchangeRates, int maxAmounts, Random random)
     {
         var largest = userInputs
             .Select(input => (Input: input, ExchangeRate: TryGetExchangeRate(input.Currency, exchangeRates)))
@@ -21,7 +21,7 @@ public static class MessageFormatter
         foreach (var (input, exchangeRate) in largest)
         {
             result.AppendLine($"> {input.OriginalText}");
-            result.AppendLine(CreateMessageLine(input, input.Amount * exchangeRate, marketPrice, exchangeRate));
+            result.AppendLine(CreateMessageLine(input, input.Amount * exchangeRate, marketPrice, exchangeRate, random));
             result.AppendLine();
         }
 
@@ -36,27 +36,37 @@ public static class MessageFormatter
         return exchangeRates.TryGetValue(currency, out var rate) ? rate : null;
     }
 
-    private static string CreateMessageLine(UserInput userInput, decimal valueInCzk, decimal marketPrice, decimal exchangeRate)
+    private static string CreateMessageLine(UserInput userInput, decimal valueInCzk, decimal marketPrice,
+        decimal exchangeRate, Random random)
     {
         var (branikCount, parcelCount, palletsCount) = BranikCalculator.CalculateAmounts(valueInCzk, marketPrice);
 
         if (branikCount <= 0)
-            return string.Format(Messages.InsufficientFunds, userInput.OriginalText);
+            return string.Format(Pick(Messages.InsufficientFunds, random), userInput.OriginalText);
 
-        var postfix = Messages.Postfix;
-        if (userInput.Currency is not Currency.Czk)
-            postfix += string.Format(Messages.ExchangeRateNote, exchangeRate, Messages.GetOneUnit(userInput.Currency));
+        if (branikCount >= 100_000)
+            return Pick(Messages.TooRich, random);
 
-        return branikCount switch
+        var quantity = branikCount switch
         {
             < 100 =>
-                $"{Messages.Prefix} {branikCount} {branikCount.GetBottleWord()} {postfix}",
+                $"{branikCount} {branikCount.GetBottleWord()}",
             < 1000 =>
-                $"{Messages.Prefix} {parcelCount} {parcelCount.GetParcelWord()} ({branikCount} {branikCount.GetBottleWord()}) {postfix}",
-            < 100_000 =>
-                $"{Messages.Prefix} {palletsCount} {palletsCount.GetPalletWord()} ({parcelCount} {parcelCount.GetParcelWord()}) {branikCount.GetBottleWord()} {postfix}",
+                $"{parcelCount} {parcelCount.GetParcelWord()} ({branikCount} {branikCount.GetBottleWord()})",
             _ =>
-                Messages.TooRich
+                $"{palletsCount} {palletsCount.GetPalletWord()} ({parcelCount} {parcelCount.GetParcelWord()}) {branikCount.GetBottleWord()}"
         };
+
+        var line = string.Format(Pick(Messages.Conversion, random), quantity);
+
+        if (userInput.Currency is not Currency.Czk)
+            line += string.Format(Messages.ExchangeRateNote, exchangeRate, Messages.GetOneUnit(userInput.Currency));
+
+        return line;
+    }
+
+    private static string Pick(IReadOnlyList<string> phrasings, Random random)
+    {
+        return phrasings[random.Next(phrasings.Count)];
     }
 }

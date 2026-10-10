@@ -11,6 +11,7 @@ public class ReplyBuilder(
     PriceHistoryStore priceHistoryStore,
     LatestExchangeRate latestExchangeRate,
     IOptions<DiscordConfiguration> discordConfiguration,
+    Random random,
     ILogger<ReplyBuilder> logger)
 {
     private readonly int _maxAmounts = discordConfiguration.Value.MaxAmountsPerReply;
@@ -30,7 +31,7 @@ public class ReplyBuilder(
 
         var exchangeRates = GetExchangeRates(amounts);
 
-        var reply = MessageFormatter.FormatMessage(amounts, marketPrice.Value, exchangeRates, _maxAmounts);
+        var reply = MessageFormatter.FormatMessage(amounts, marketPrice.Value, exchangeRates, _maxAmounts, random);
         return reply.Length is 0 ? null : reply;
     }
 

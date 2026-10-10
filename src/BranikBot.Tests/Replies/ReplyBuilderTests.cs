@@ -29,7 +29,7 @@ public sealed class ReplyBuilderTests : IDisposable
     private ReplyBuilder CreateBuilder(int maxAmounts)
     {
         var configuration = new DiscordConfiguration { MaxAmountsPerReply = maxAmounts };
-        return new ReplyBuilder(_priceHistoryStore, _latestExchangeRate, Options.Create(configuration),
+        return new ReplyBuilder(_priceHistoryStore, _latestExchangeRate, Options.Create(configuration), FixedPickRandom.First,
             Mock.Of<ILogger<ReplyBuilder>>());
     }
 
@@ -208,5 +208,22 @@ public sealed class ReplyBuilderTests : IDisposable
         Assert.NotNull(reply);
         Assert.Contains("> 10 usd", reply);
         Assert.DoesNotContain("1000 liber", reply);
+    }
+
+    [Fact]
+    public void Build_WithRandomPickingSecondPhrasing_ReturnsThatPhrasing()
+    {
+        // Arrange
+        _priceHistoryStore.Record(100m, Now);
+        var configuration = new DiscordConfiguration { MaxAmountsPerReply = 1 };
+        var builder = new ReplyBuilder(_priceHistoryStore, _latestExchangeRate, Options.Create(configuration),
+            new FixedPickRandom(1), Mock.Of<ILogger<ReplyBuilder>>());
+
+        // Act
+        var reply = builder.Build("mam 250 kc");
+
+        // Assert
+        Assert.NotNull(reply);
+        Assert.Contains("Za to máš 2 dvoulitrovky Braníčka ve slevě!", reply);
     }
 }

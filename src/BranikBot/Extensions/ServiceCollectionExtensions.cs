@@ -49,6 +49,7 @@ public static class ServiceCollectionExtensions
         ConfigureLongLivedClient(services.AddHttpClient<IExchangeRateProvider, CnbExchangeRateProvider>());
 
         services.AddSingleton(TimeProvider.System);
+        services.AddSingleton(Random.Shared);
         services.AddSingleton(sp =>
             new SqliteDatabase(sp.GetRequiredService<IOptions<DatabaseConfiguration>>().Value.Path));
         services.AddSingleton<PriceHistoryStore>();
@@ -62,7 +63,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton(sp => new ReplyChance(
             sp.GetRequiredService<IOptions<DiscordConfiguration>>().Value.ReplyChance,
-            Random.Shared));
+            sp.GetRequiredService<Random>()));
         services.AddSingleton<BotMessageReader>();
         services.AddSingleton<ReplyBuilder>();
         services.AddSingleton<MessageHandler>();
