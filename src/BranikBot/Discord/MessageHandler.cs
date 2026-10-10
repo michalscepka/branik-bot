@@ -15,7 +15,7 @@ namespace BranikBot.Discord;
 public class MessageHandler(
     GatewayClient gatewayClient,
     PriceHistoryStore priceHistoryStore,
-    ExchangeRateStore exchangeRateStore,
+    LatestExchangeRate latestExchangeRate,
     IOptions<DiscordConfiguration> discordConfiguration,
     ILogger<MessageHandler> logger)
 {
@@ -83,10 +83,10 @@ public class MessageHandler(
                 return;
             }
 
-            var euroExchangeRate = exchangeRateStore.GetLatest(Currency.Eur);
+            var euroExchangeRate = latestExchangeRate.Get(Currency.Eur);
             if (euroExchangeRate is null && amounts.Any(a => a.Currency is Currency.Eur))
             {
-                logger.LogWarning("No EUR exchange rate stored yet, skipping EUR amounts in channel {ChannelId}.",
+                logger.LogWarning("No EUR exchange rate sampled yet, skipping EUR amounts in channel {ChannelId}.",
                     message.ChannelId);
             }
 

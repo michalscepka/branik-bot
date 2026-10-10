@@ -46,7 +46,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<SqliteDatabase>();
         services.AddSingleton<PriceHistoryStore>();
-        services.AddSingleton<ExchangeRateStore>();
+        services.AddSingleton<LatestExchangeRate>();
         services.AddHostedService<PriceSampler>();
         services.AddHostedService<ExchangeRateSampler>();
 

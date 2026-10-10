@@ -7,7 +7,7 @@ namespace BranikBot.Pricing;
 
 public class ExchangeRateSampler(
     IExchangeRateProvider exchangeRateProvider,
-    ExchangeRateStore exchangeRateStore,
+    LatestExchangeRate latestExchangeRate,
     TimeProvider timeProvider,
     IOptions<ExchangeRateConfiguration> configuration,
     ILogger<ExchangeRateSampler> logger) : BackgroundService
@@ -30,11 +30,11 @@ public class ExchangeRateSampler(
             if (rate <= 0)
                 return;
 
-            exchangeRateStore.Record(Currency.Eur, rate, timeProvider.GetUtcNow());
+            latestExchangeRate.Set(Currency.Eur, rate);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to store the exchange rate sample");
+            logger.LogError(ex, "Failed to sample the exchange rate");
         }
     }
 }

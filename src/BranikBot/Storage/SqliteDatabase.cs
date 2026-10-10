@@ -14,12 +14,6 @@ public class SqliteDatabase(IOptions<DatabaseConfiguration> configuration)
             first_seen_at TEXT NOT NULL,
             last_seen_at TEXT NOT NULL
         );
-
-        CREATE TABLE IF NOT EXISTS exchange_rate (
-            currency TEXT PRIMARY KEY,
-            rate TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        );
         """;
 
     private readonly string _connectionString = InitializeDatabase(configuration.Value.Path);

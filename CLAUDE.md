@@ -37,7 +37,7 @@ A single `BranikBot` project plus `BranikBot.Tests` (xUnit + Moq). The bot has o
 
 - `Discord/` - `DiscordBackgroundService` and `MessageHandler` (gateway wiring, bot filtering, cooldown).
 - `Parsing/` - `AmountParser` and the `UserInput` record it produces.
-- `Pricing/` - `IMarketPriceProvider` and `IExchangeRateProvider` with their HTTP implementations, the samplers (`PriceSampler`, `ExchangeRateSampler`) and stores (`PriceHistoryStore`, `ExchangeRateStore`) that keep their results, plus `Currency`.
+- `Pricing/` - `IMarketPriceProvider` and `IExchangeRateProvider` with their HTTP implementations, the samplers (`PriceSampler`, `ExchangeRateSampler`), `PriceHistoryStore` (SQLite price history) and `LatestExchangeRate` (in-memory rate), plus `Currency`.
 - `Storage/` - `SqliteDatabase`, which owns the SQLite file, the schema of every table and opens connections for the stores.
 - `Replies/` - `MessageFormatter`, `BranikCalculator` (bottles / parcels of 6 / pallets of 100 parcels), the Czech reply templates in `Messages.cs` and the plural helpers.
 - `Configuration/` - options classes bound from appsettings.
@@ -51,7 +51,7 @@ All DI registration is in `ServiceCollectionExtensions.AddBranikBot()`. If the b
 2. `MessageHandler` ignores its own messages and all other bots, except the one whose ID is `Discord:EuroChampionId`. For that bot the gateway payload arrives before its content is final, so the handler re-fetches the message over REST through a Polly pipeline (retry every 1s, up to 30 times, while `Flags != 0`) and flattens content + embeds (title, description, fields, footer) into one string.
 3. `AmountParser.ExtractAmounts` (regex) turns text into `UserInput` records. It handles a number plus a currency suffix, `k` (thousands) and `mega` (millions) with an optional suffix. No suffix means CZK. Results are de-duplicated via a `HashSet`.
 4. Per-channel cooldown (`Discord:ChannelCooldown`) is an in-memory dictionary on the singleton handler. It is checked only after amounts were found, and set only after a reply was sent.
-5. `MessageHandler` reads the latest price from `PriceHistoryStore` and the EUR rate from `ExchangeRateStore`, so replying never makes an HTTP call for either. If no price was ever stored, it logs a warning and sends no reply.
+5. `MessageHandler` reads the latest price from `PriceHistoryStore` and the EUR rate from `LatestExchangeRate`, so replying never makes an HTTP call for either. If no price was ever stored, it logs a warning and sends no reply.
 6. `MessageFormatter` (static, no dependencies) converts EUR with the rate it is given and leaves EUR amounts out when there is none, so a message with only EUR amounts gets no reply. It picks the reply tier by bottle count: bottles (<100), parcels (<1000), pallets (<100 000), otherwise the "too rich" message. Czech plural forms come from the `extension(int)` block in `StringExtensions`.
 
 Both providers are typed `HttpClient`s and are only called by the samplers.
@@ -60,9 +60,9 @@ Both providers are typed `HttpClient`s and are only called by the samplers.
 
 `PriceSampler` is a hosted service that calls `AkcniCenyProvider` once at startup and then every `Market:SampleInterval`. The provider scrapes akcniceny.cz (`//span[@itemprop='lowPrice']`) with HtmlAgilityPack and returns `null` on any failure. There is no fallback price: a failed sample stores nothing, so replies keep using the last real price.
 
-`ExchangeRateSampler` does the same for `CnbExchangeRateProvider` (CNB daily XML feed, returns `0m` on failure) every `ExchangeRate:SampleInterval`. A failed sample stores nothing, so the last real rate stays in use.
+`ExchangeRateSampler` does the same for `CnbExchangeRateProvider` (CNB daily XML feed, returns `0m` on failure) every `ExchangeRate:SampleInterval`. The rate is kept only in memory in `LatestExchangeRate`: a failed sample changes nothing, so the last real rate stays in use, and after a restart there is no rate until the first successful sample.
 
-Both stores write to the SQLite file at `Database:Path` (`data/branik.db`, a Docker volume in both compose files). The `price_history` table has one row per price period: an unchanged price only moves `last_seen_at` forward, a changed price inserts a new row. The `exchange_rate` table has one row per currency that is overwritten by each sample. New tables go into the schema in `SqliteDatabase`.
+`PriceHistoryStore` writes to the SQLite file at `Database:Path` (`data/branik.db`, a Docker volume in both compose files). The `price_history` table has one row per price period: an unchanged price only moves `last_seen_at` forward, a changed price inserts a new row. The table schema lives in `SqliteDatabase`, not in the store. New tables go into the schema in `SqliteDatabase`.
 
 ### Culture
 

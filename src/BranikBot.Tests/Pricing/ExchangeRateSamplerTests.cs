@@ -6,36 +6,26 @@ using Moq;
 
 namespace BranikBot.Tests.Pricing;
 
-public sealed class ExchangeRateSamplerTests : IDisposable
+public class ExchangeRateSamplerTests
 {
-    private static readonly DateTimeOffset Now = new(2026, 10, 10, 8, 0, 0, TimeSpan.Zero);
-
-    private readonly TempDatabase _database = new();
-    private readonly ExchangeRateStore _store;
+    private readonly LatestExchangeRate _latestExchangeRate = new();
     private readonly Mock<IExchangeRateProvider> _providerMock = new();
     private readonly ExchangeRateSampler _sampler;
 
     public ExchangeRateSamplerTests()
     {
-        _store = new ExchangeRateStore(_database.Create());
-
-        var timeProviderMock = new Mock<TimeProvider>();
-        timeProviderMock.Setup(t => t.GetUtcNow()).Returns(Now);
-
         var options = Options.Create(new ExchangeRateConfiguration
         {
             Url = "http://example.com/rates.xml",
             SampleInterval = TimeSpan.FromHours(1)
         });
 
-        _sampler = new ExchangeRateSampler(_providerMock.Object, _store, timeProviderMock.Object, options,
+        _sampler = new ExchangeRateSampler(_providerMock.Object, _latestExchangeRate, TimeProvider.System, options,
             Mock.Of<ILogger<ExchangeRateSampler>>());
     }
 
-    public void Dispose() => _database.Dispose();
-
     [Fact]
-    public async Task SampleAsync_ProviderReturnsRate_StoresRate()
+    public async Task SampleAsync_ProviderReturnsRate_SetsLatestRate()
     {
         // Arrange
         _providerMock.Setup(p => p.GetExchangeRateAsync(Currency.Eur)).ReturnsAsync(24.340m);
@@ -44,25 +34,25 @@ public sealed class ExchangeRateSamplerTests : IDisposable
         await _sampler.SampleAsync();
 
         // Assert
-        Assert.Equal(24.340m, _store.GetLatest(Currency.Eur));
+        Assert.Equal(24.340m, _latestExchangeRate.Get(Currency.Eur));
     }
 
     [Fact]
-    public async Task SampleAsync_ProviderReturnsZero_KeepsLastStoredRate()
+    public async Task SampleAsync_ProviderReturnsZero_KeepsLastRate()
     {
         // Arrange
-        _store.Record(Currency.Eur, 24.340m, Now.AddHours(-1));
+        _latestExchangeRate.Set(Currency.Eur, 24.340m);
         _providerMock.Setup(p => p.GetExchangeRateAsync(Currency.Eur)).ReturnsAsync(0m);
 
         // Act
         await _sampler.SampleAsync();
 
         // Assert
-        Assert.Equal(24.340m, _store.GetLatest(Currency.Eur));
+        Assert.Equal(24.340m, _latestExchangeRate.Get(Currency.Eur));
     }
 
     [Fact]
-    public async Task SampleAsync_ProviderReturnsZeroOnEmptyDatabase_StoresNothing()
+    public async Task SampleAsync_ProviderReturnsZeroWithNoRate_SetsNothing()
     {
         // Arrange
         _providerMock.Setup(p => p.GetExchangeRateAsync(Currency.Eur)).ReturnsAsync(0m);
@@ -71,7 +61,7 @@ public sealed class ExchangeRateSamplerTests : IDisposable
         await _sampler.SampleAsync();
 
         // Assert
-        Assert.Null(_store.GetLatest(Currency.Eur));
+        Assert.Null(_latestExchangeRate.Get(Currency.Eur));
     }
 
     [Fact]
@@ -84,6 +74,6 @@ public sealed class ExchangeRateSamplerTests : IDisposable
         await _sampler.SampleAsync();
 
         // Assert
-        Assert.Null(_store.GetLatest(Currency.Eur));
+        Assert.Null(_latestExchangeRate.Get(Currency.Eur));
     }
 }
