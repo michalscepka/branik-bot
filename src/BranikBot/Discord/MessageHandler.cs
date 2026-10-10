@@ -26,6 +26,9 @@ public class MessageHandler(
         if (message.Author.IsBot && !isEuroChampion)
             return;
 
+        if (channelCooldown.IsActive(message.ChannelId))
+            return;
+
         try
         {
             var content = isEuroChampion

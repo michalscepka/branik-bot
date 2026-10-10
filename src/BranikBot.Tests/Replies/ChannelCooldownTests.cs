@@ -19,6 +19,57 @@ public class ChannelCooldownTests
     }
 
     [Fact]
+    public void IsActive_NeverStarted_ReturnsFalse()
+    {
+        // Act
+        var active = _cooldown.IsActive(ChannelId);
+
+        // Assert
+        Assert.False(active);
+    }
+
+    [Fact]
+    public void IsActive_WithinCooldown_ReturnsTrue()
+    {
+        // Arrange
+        _cooldown.TryStart(ChannelId);
+        _timeProviderMock.Setup(t => t.GetUtcNow()).Returns(Start.AddMinutes(4));
+
+        // Act
+        var active = _cooldown.IsActive(ChannelId);
+
+        // Assert
+        Assert.True(active);
+    }
+
+    [Fact]
+    public void IsActive_AfterCooldownElapsed_ReturnsFalse()
+    {
+        // Arrange
+        _cooldown.TryStart(ChannelId);
+        _timeProviderMock.Setup(t => t.GetUtcNow()).Returns(Start.AddMinutes(5));
+
+        // Act
+        var active = _cooldown.IsActive(ChannelId);
+
+        // Assert
+        Assert.False(active);
+    }
+
+    [Fact]
+    public void IsActive_NeverStarted_DoesNotStartCooldown()
+    {
+        // Arrange
+        _cooldown.IsActive(ChannelId);
+
+        // Act
+        var started = _cooldown.TryStart(ChannelId);
+
+        // Assert
+        Assert.True(started);
+    }
+
+    [Fact]
     public void TryStart_FirstCallForChannel_ReturnsTrue()
     {
         // Act
