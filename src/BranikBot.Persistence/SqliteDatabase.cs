@@ -12,6 +12,13 @@ public class SqliteDatabase(string path)
             first_seen_at TEXT NOT NULL,
             last_seen_at TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS trusted_bot (
+            guild_id INTEGER NOT NULL,
+            bot_id INTEGER NOT NULL,
+            added_at TEXT NOT NULL,
+            PRIMARY KEY (guild_id, bot_id)
+        );
         """;
 
     private readonly string _connectionString = InitializeDatabase(path);

@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NetCord.Gateway;
 using NetCord.Hosting.Gateway;
+using NetCord.Hosting.Services.ApplicationCommands;
 
 namespace BranikBot.Extensions;
 
@@ -42,6 +43,7 @@ public static class ServiceCollectionExtensions
             opt.Token = sp.GetRequiredService<IOptions<DiscordConfiguration>>().Value.BotToken;
             opt.Intents = GatewayIntents.GuildMessages | GatewayIntents.MessageContent;
         });
+        services.AddApplicationCommands();
 
         ConfigureLongLivedClient(services.AddHttpClient<IMarketPriceProvider, AkcniCenyProvider>());
         ConfigureLongLivedClient(services.AddHttpClient<IExchangeRateProvider, CnbExchangeRateProvider>());
@@ -50,6 +52,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp =>
             new SqliteDatabase(sp.GetRequiredService<IOptions<DatabaseConfiguration>>().Value.Path));
         services.AddSingleton<PriceHistoryStore>();
+        services.AddSingleton<TrustedBotStore>();
         services.AddSingleton<LatestExchangeRate>();
         services.AddHostedService<PriceSamplingBackgroundService>();
         services.AddHostedService<ExchangeRateSamplingBackgroundService>();
@@ -57,7 +60,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => new ChannelCooldown(
             sp.GetRequiredService<IOptions<DiscordConfiguration>>().Value.ChannelCooldown,
             sp.GetRequiredService<TimeProvider>()));
-        services.AddSingleton<EuroChampionMessageReader>();
+        services.AddSingleton<BotMessageReader>();
         services.AddSingleton<ReplyBuilder>();
         services.AddSingleton<MessageHandler>();
         services.AddHostedService<DiscordBackgroundService>();

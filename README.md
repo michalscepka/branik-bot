@@ -25,19 +25,37 @@
 
 ## Features
 
--   **Price Detection**: Automatically parses messages for various currency formats (CZK, EUR).
--   **Market Comparison**: Fetches current market prices and calculates how much Braník 2l you can buy for the detected amount.
+-   **Price Detection**: Parses messages for money amounts in CZK and EUR.
+-   **Market Comparison**: Calculates how many Braník 2l bottles, parcels or pallets the amount would buy at the current shop price.
+-   **Sampled Prices**: The shop price and the EUR exchange rate are fetched in the background, so a reply never waits for an HTTP call. If a fetch fails, the last real value stays in use.
+-   **Price History**: Every price change is stored in a SQLite file that survives restarts.
 -   **Cooldown System**: Prevents spam by enforcing a cooldown period per channel.
+-   **Trusted Bots**: Other bots are ignored by default. A server admin picks the ones to read with a slash command.
 -   **Dockerized**: Ready-to-use `docker-compose` setup for both production and local development.
+
+---
+
+## Commands
+
+All commands need the **Manage Server** permission and answer only to the admin who ran them.
+
+| Command | Description |
+| :--- | :--- |
+| `/branik-config bot-add <bot>` | Start reading the messages of the chosen bot on this server. |
+| `/branik-config bot-remove <bot>` | Stop reading the messages of the chosen bot. |
+| `/branik-config bot-list` | List the bots whose messages are read on this server. |
+
+Messages written by people are always read. The list is kept per server.
 
 ---
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
+Before you begin, ensure you have the following:
 
 -   [Docker Desktop](https://www.docker.com/products/docker-desktop)
 -   [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (if running locally without Docker)
+-   A bot application in the [Developer Portal](https://discord.com/developers/applications) with the **Message Content Intent** enabled
 
 ---
 
@@ -54,42 +72,65 @@ cd branik-bot
 
 ### 2. Configure Environment
 
-Update `appsettings.json` to set the following Environment Variable:
+The only required setting is the bot token. Pass it as an environment variable and keep it out of `appsettings.json`:
 
 | Variable | Description |
 | :--- | :--- |
-| `BotToken` | Your bot token from the [Developer Portal](https://discord.com/developers/applications). |
+| `Discord__BotToken` | Your bot token from the [Developer Portal](https://discord.com/developers/applications). |
+
+Optional settings, with their defaults from `appsettings.json`:
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `Discord__ChannelCooldown` | `00:05:00` | Minimum time between two replies in one channel. |
+| `Market__SampleInterval` | `06:00:00` | How often the shop price is fetched. |
+| `ExchangeRate__SampleInterval` | `06:00:00` | How often the EUR exchange rate is fetched. |
+| `Database__Path` | `data/branik.db` | Location of the SQLite file. |
 
 ### 3. Run with Docker
 
-You can start the bot using Docker Compose:
+Replace `<BOT_TOKEN>` in `docker-compose.local.yml`, then start the bot:
 
 ```bash
 docker compose -f docker-compose.local.yml up -d --build
 ```
 
+The database lives in the `branik-data` volume, so it survives rebuilding the container.
+
 ### 4. Run Locally (Development)
 
-Navigate to the project directory and run:
+Run from the project folder, so `appsettings.json` and the database are found there:
 
 ```bash
-dotnet run --project src/BranikBot/BranikBot.csproj
+cd src/BranikBot
+Discord__BotToken=<BOT_TOKEN> dotnet run
+```
+
+### 5. Run the Tests
+
+```bash
+dotnet test src/BranikBot.Tests/
 ```
 
 ---
 
 ## Project Structure
 
-A single project, with folders by what the code does:
+Three projects that only reference downwards, plus the tests:
 
 ```text
 src/
-├── BranikBot/
-│   ├── Discord/        # Gateway wiring, message handling, cooldown
-│   ├── Parsing/        # Extracting money amounts from text
-│   ├── Pricing/        # Market price and exchange rate providers
-│   ├── Replies/        # Calculation and reply formatting
-│   ├── Configuration/  # Options bound from appsettings
-│   └── Logging/        # Serilog setup
-└── BranikBot.Tests/    # Unit tests
+├── BranikBot.Core/          # Pure logic, no package references
+│   ├── Parsing/             # Extracting money amounts from text
+│   ├── Replies/             # Calculation, reply formatting, cooldown
+│   └── Pricing/             # Shared currency and price types
+├── BranikBot.Persistence/   # SQLite: price history and trusted bots
+├── BranikBot/               # The host
+│   ├── Discord/             # Gateway wiring, message handling, slash commands
+│   ├── Replies/             # Building a reply from a message
+│   ├── Pricing/             # Price and exchange rate providers and samplers
+│   ├── Configuration/       # Options bound from appsettings
+│   ├── Extensions/          # Dependency injection registration
+│   └── Logging/             # Serilog setup
+└── BranikBot.Tests/         # Unit tests
 ```

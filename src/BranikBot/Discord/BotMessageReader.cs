@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.Extensions.Logging;
+using NetCord;
 using NetCord.Gateway;
 using NetCord.Rest;
 using Polly;
@@ -7,9 +8,9 @@ using Polly.Retry;
 
 namespace BranikBot.Discord;
 
-// The gateway payload of a Euro Champion message arrives before its content is final,
-// so the message is re-fetched over REST until it is complete.
-public class EuroChampionMessageReader(GatewayClient gatewayClient, ILogger<EuroChampionMessageReader> logger)
+// A bot can post a placeholder first and fill it in later, so the gateway payload may not be final.
+// The message is re-fetched over REST until it is no longer marked as loading.
+public class BotMessageReader(GatewayClient gatewayClient, ILogger<BotMessageReader> logger)
 {
     private const int RetryAttempts = 30;
     private const int RetryDelay = 1;
@@ -18,13 +19,13 @@ public class EuroChampionMessageReader(GatewayClient gatewayClient, ILogger<Euro
         .AddRetry(new RetryStrategyOptions<RestMessage>
         {
             ShouldHandle = new PredicateBuilder<RestMessage>()
-                .HandleResult(m => m.Flags != 0),
+                .HandleResult(m => m.Flags.HasFlag(MessageFlags.Loading)),
             BackoffType = DelayBackoffType.Constant,
             Delay = TimeSpan.FromSeconds(RetryDelay),
             MaxRetryAttempts = RetryAttempts,
             OnRetry = args =>
             {
-                logger.LogInformation("Retry for Euro Champion (Attempt {Attempt} of {RetryAttempts}).",
+                logger.LogInformation("Bot message still loading (attempt {Attempt} of {RetryAttempts}).",
                     args.AttemptNumber + 1, RetryAttempts);
 
                 return default;

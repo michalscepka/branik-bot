@@ -3,6 +3,8 @@ using BranikBot;
 using BranikBot.Extensions;
 using BranikBot.Logging.Extensions;
 using Microsoft.Extensions.Hosting;
+using NetCord.Hosting.Gateway;
+using NetCord.Hosting.Services;
 using Serilog;
 
 try
@@ -26,7 +28,11 @@ try
         services.AddBranikBot();
     });
 
-    await builder.Build().RunAsync();
+    var host = builder.Build();
+    host.AddModules(typeof(Program).Assembly);
+    host.UseGatewayEventHandlers();
+
+    await host.RunAsync();
 }
 catch (Exception ex) when (ex is not HostAbortedException)
 {

@@ -39,27 +39,33 @@ Three projects plus `BranikBot.Tests` (xUnit + Moq, references all of them). Ref
   - `Parsing/` - `AmountParser` and the `UserInput` record it produces.
   - `Replies/` - `MessageFormatter`, `ChannelCooldown`, `BranikCalculator` (bottles / parcels of 6 / pallets of 100 parcels), the Czech reply templates in `Messages.cs` and the plural helpers.
   - `Pricing/` - the shared `Currency` enum and `PricePeriod` record.
-- `BranikBot.Persistence` - SQLite access, references Core. `SqliteDatabase` owns the file, the schema of every table and opens connections. Stores such as `PriceHistoryStore` only hold queries. It takes plain values (the file path), not options classes.
+- `BranikBot.Persistence` - SQLite access, references Core. `SqliteDatabase` owns the file, the schema of every table and opens connections. Stores such as `PriceHistoryStore` and `TrustedBotStore` only hold queries. It takes plain values (the file path), not options classes.
 - `BranikBot` - the host, references both. The project root holds only `Program.cs`. The rest is grouped by what it does:
-  - `Discord/` - everything that needs a NetCord type: `DiscordBackgroundService` (gateway wiring), `MessageHandler` (bot filtering and orchestration) and `EuroChampionMessageReader`.
+  - `Discord/` - everything that needs a NetCord type: `DiscordBackgroundService` (gateway wiring), `MessageHandler` (bot filtering and orchestration), `BotMessageReader` and the slash commands in `ConfigCommands`.
   - `Replies/` - `ReplyBuilder`, which has no NetCord dependency. Same namespace as `Replies/` in Core.
   - `Pricing/` - the HTTP providers (`AkcniCenyProvider`, `CnbExchangeRateProvider`), their interfaces `IMarketPriceProvider` and `IExchangeRateProvider` in `Pricing/Abstractions/`, the samplers (`PriceSamplingBackgroundService`, `ExchangeRateSamplingBackgroundService`) and `LatestExchangeRate` (in-memory rate).
   - `Configuration/` - options classes bound from appsettings.
   - `Logging/` - Serilog bootstrap and host setup.
   - `Extensions/` - `ServiceCollectionExtensions`.
 
-All DI registration is in `ServiceCollectionExtensions.AddBranikBot()` in the host. A new project needs its `.csproj` added to the `COPY` lines in `src/BranikBot/Dockerfile`, otherwise the image build fails at restore.
+All DI registration is in `ServiceCollectionExtensions.AddBranikBot()` in the host. `Program.cs` additionally calls `AddModules` and `UseGatewayEventHandlers` on the built host, which is what discovers the slash command modules and routes interactions to them. A new project needs its `.csproj` added to the `COPY` lines in `src/BranikBot/Dockerfile`, otherwise the image build fails at restore.
 
 ### Message flow
 
 1. `DiscordBackgroundService` subscribes `MessageHandler.ProcessIncomingMessage` to NetCord's `GatewayClient.MessageCreate`. The gateway needs the `GuildMessages | MessageContent` intents.
-2. `MessageHandler` ignores its own messages and all other bots, except the one whose ID is `Discord:EuroChampionId`. For that bot the gateway payload arrives before its content is final, so `EuroChampionMessageReader` re-fetches the message over REST through a Polly pipeline (retry every 1s, up to 30 times, while `Flags != 0`) and flattens content + embeds (title, description, fields, footer) into one string.
+2. `MessageHandler` ignores its own messages and all other bots, except those in `TrustedBotStore` for the guild the message came from (see Trusted bots). A bot can post a placeholder and fill it in later, so for a trusted bot `BotMessageReader` re-fetches the message over REST through a Polly pipeline (retry every 1s, up to 30 times, while the `Loading` flag is set) and flattens content + embeds (title, description, fields, footer) into one string.
 3. `ReplyBuilder.Build` turns the text into a reply, or `null` when there is nothing to say. It calls `AmountParser.ExtractAmounts` (regex), which produces `UserInput` records. The parser handles a number plus a currency suffix, `k` (thousands) and `mega` (millions) with an optional suffix. No suffix means CZK. Results are de-duplicated via a `HashSet`.
 4. `ReplyBuilder` reads the latest price from `PriceHistoryStore` and the EUR rate from `LatestExchangeRate`, so replying never makes an HTTP call for either. If no price was ever stored, it logs a warning and returns `null`.
-5. Per-channel cooldown (`Discord:ChannelCooldown`) is the in-memory singleton `ChannelCooldown`. `MessageHandler` first calls `IsActive` as a cheap early exit, before reading the content, so a channel on cooldown costs no parsing, database read or Euro Champion re-fetch. `TryStart` then checks and starts it in one step, only after a reply was built and before it is sent, so a failed send still starts the cooldown.
+5. Per-channel cooldown (`Discord:ChannelCooldown`) is the in-memory singleton `ChannelCooldown`. `MessageHandler` first calls `IsActive` as a cheap early exit, before reading the content, so a channel on cooldown costs no parsing, database read or bot message re-fetch. `TryStart` then checks and starts it in one step, only after a reply was built and before it is sent, so a failed send still starts the cooldown.
 6. `MessageFormatter` (static, no dependencies) converts EUR with the rate it is given and leaves EUR amounts out when there is none, so a message with only EUR amounts gets no reply. It picks the reply tier by bottle count: bottles (<100), parcels (<1000), pallets (<100 000), otherwise the "too rich" message. Czech plural forms come from the `extension(int)` block in `StringExtensions`.
 
 Both providers are typed `HttpClient`s and are only called by the samplers, which hold them for the whole process. Their handler is therefore registered with an infinite handler lifetime and a `PooledConnectionLifetime` of 2 minutes, so DNS changes are still picked up. Register any new long-lived client the same way (`ConfigureLongLivedClient`).
+
+### Trusted bots
+
+Which bots are read is configured per guild by its admins, not in appsettings. `ConfigCommands` is the `/branik-config` slash command with the subcommands `bot-add`, `bot-remove` and `bot-list`. It is guild only, requires Manage Server by default (Discord enforces this, and guild admins can re-assign it in the server's integration settings) and always answers ephemerally. The list is the `trusted_bot` table (`guild_id`, `bot_id`), so a bot trusted in one guild is still ignored in every other. Command texts are Czech, like the replies.
+
+The commands are registered globally at startup, which is a REST call: the host fails to start if Discord rejects the token.
 
 ### Sampled prices
 

@@ -1,29 +1,22 @@
-using BranikBot.Configuration;
+using BranikBot.Persistence;
 using BranikBot.Replies;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using NetCord.Gateway;
 
 namespace BranikBot.Discord;
 
 public class MessageHandler(
     GatewayClient gatewayClient,
-    EuroChampionMessageReader euroChampionMessageReader,
+    BotMessageReader botMessageReader,
+    TrustedBotStore trustedBotStore,
     ReplyBuilder replyBuilder,
     ChannelCooldown channelCooldown,
-    IOptions<DiscordConfiguration> discordConfiguration,
     ILogger<MessageHandler> logger)
 {
-    private readonly ulong _euroChampionId = discordConfiguration.Value.EuroChampionId;
-
     public async ValueTask ProcessIncomingMessage(Message message)
     {
         // Check if message is from Branik Bot
         if (message.Author.Id == gatewayClient.Id)
-            return;
-
-        var isEuroChampion = message.Author.Id == _euroChampionId;
-        if (message.Author.IsBot && !isEuroChampion)
             return;
 
         if (channelCooldown.IsActive(message.ChannelId))
@@ -31,8 +24,12 @@ public class MessageHandler(
 
         try
         {
-            var content = isEuroChampion
-                ? await euroChampionMessageReader.ReadAsync(message)
+            var isBot = message.Author.IsBot;
+            if (isBot && !IsTrustedBot(message))
+                return;
+
+            var content = isBot
+                ? await botMessageReader.ReadAsync(message)
                 : message.Content;
 
             var reply = replyBuilder.Build(content);
@@ -55,4 +52,7 @@ public class MessageHandler(
             logger.LogError(ex, "Error processing message in channel {ChannelId}", message.ChannelId);
         }
     }
+
+    private bool IsTrustedBot(Message message) =>
+        message.GuildId is { } guildId && trustedBotStore.IsTrusted(guildId, message.Author.Id);
 }

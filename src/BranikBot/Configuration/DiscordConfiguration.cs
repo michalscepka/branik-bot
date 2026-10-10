@@ -12,7 +12,4 @@ public class DiscordConfiguration
 
     [Required]
     public TimeSpan ChannelCooldown { get; [UsedImplicitly] set; }
-
-    [Required]
-    public ulong EuroChampionId { get; [UsedImplicitly] set; }
 }
