@@ -5,4 +5,9 @@
     environment:
       - DOTNET_ENVIRONMENT=Production
       - Discord__BotToken=${DISCORD_BOT_TOKEN}
+    volumes:
+      - branik-data:/app/data
     restart: unless-stopped
+
+volumes:
+  branik-data:

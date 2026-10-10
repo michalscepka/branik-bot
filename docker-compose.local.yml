@@ -4,8 +4,13 @@ services:
   branik-bot:
     build:
       context: ./src
-      dockerfile: BranikBot.ConsoleApp/Dockerfile
+      dockerfile: BranikBot/Dockerfile
     container_name: branik-bot-local
     environment:
       - DOTNET_ENVIRONMENT=Development
       - Discord__BotToken=<BOT_TOKEN>
+    volumes:
+      - branik-data:/app/data
+
+volumes:
+  branik-data:

@@ -73,20 +73,23 @@ docker compose -f docker-compose.local.yml up -d --build
 Navigate to the project directory and run:
 
 ```bash
-dotnet run --project src/BranikBot.ConsoleApp/BranikBot.ConsoleApp.csproj
+dotnet run --project src/BranikBot/BranikBot.csproj
 ```
 
 ---
 
 ## Project Structure
 
-The project follows Clean Architecture principles:
+A single project, with folders by what the code does:
 
 ```text
 src/
-├── BranikBot.Domain/         # Core entities, enums, and business logic
-├── BranikBot.Application/    # Use cases, provider interfaces, and resources
-├── BranikBot.Infrastructure/ # External integrations (Discord, Caching, HTTP Clients)
-├── BranikBot.ConsoleApp/     # Entry point and host configuration
-└── BranikBot.Tests/          # Unit and Integration tests
+├── BranikBot/
+│   ├── Discord/        # Gateway wiring, message handling, cooldown
+│   ├── Parsing/        # Extracting money amounts from text
+│   ├── Pricing/        # Market price and exchange rate providers
+│   ├── Replies/        # Calculation and reply formatting
+│   ├── Configuration/  # Options bound from appsettings
+│   └── Logging/        # Serilog setup
+└── BranikBot.Tests/    # Unit tests
 ```
