@@ -10,8 +10,10 @@ WORKDIR /src
 COPY ["Directory.Build.props", "."]
 COPY ["Directory.Packages.props", "."]
 
-# Copy csproj file
+# Copy csproj files
 COPY ["BranikBot/BranikBot.csproj", "BranikBot/"]
+COPY ["BranikBot.Core/BranikBot.Core.csproj", "BranikBot.Core/"]
+COPY ["BranikBot.Persistence/BranikBot.Persistence.csproj", "BranikBot.Persistence/"]
 
 # Restore dependencies
 RUN dotnet restore "BranikBot/BranikBot.csproj"

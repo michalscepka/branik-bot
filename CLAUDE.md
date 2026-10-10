@@ -33,17 +33,20 @@ CI: `tests.yml` runs the test project on pushes and PRs to `main`. `build.yml` b
 
 ## Architecture
 
-A single `BranikBot` project plus `BranikBot.Tests` (xUnit + Moq). The bot has one feature, so code is grouped by what it does rather than by layer:
+Three projects plus `BranikBot.Tests` (xUnit + Moq, references all of them). References only point downwards:
 
-- `Discord/` - `DiscordBackgroundService` and `MessageHandler` (gateway wiring, bot filtering, cooldown).
-- `Parsing/` - `AmountParser` and the `UserInput` record it produces.
-- `Pricing/` - `IMarketPriceProvider` and `IExchangeRateProvider` with their HTTP implementations, the samplers (`PriceSampler`, `ExchangeRateSampler`), `PriceHistoryStore` (SQLite price history) and `LatestExchangeRate` (in-memory rate), plus `Currency`.
-- `Storage/` - `SqliteDatabase`, which owns the SQLite file, the schema of every table and opens connections for the stores.
-- `Replies/` - `MessageFormatter`, `BranikCalculator` (bottles / parcels of 6 / pallets of 100 parcels), the Czech reply templates in `Messages.cs` and the plural helpers.
-- `Configuration/` - options classes bound from appsettings.
-- `Logging/` - Serilog bootstrap and host setup.
+- `BranikBot.Core` - pure logic with no package references and no project references. Its root namespace is `BranikBot`, so namespaces follow the folders (`BranikBot.Parsing`, `BranikBot.Replies`, `BranikBot.Pricing`).
+  - `Parsing/` - `AmountParser` and the `UserInput` record it produces.
+  - `Replies/` - `MessageFormatter`, `BranikCalculator` (bottles / parcels of 6 / pallets of 100 parcels), the Czech reply templates in `Messages.cs` and the plural helpers.
+  - `Pricing/` - the shared `Currency` enum and `PricePeriod` record.
+- `BranikBot.Persistence` - SQLite access, references Core. `SqliteDatabase` owns the file, the schema of every table and opens connections. Stores such as `PriceHistoryStore` only hold queries. It takes plain values (the file path), not options classes.
+- `BranikBot` - the host, references both. The code is grouped by what it does:
+  - `Discord/` - `DiscordBackgroundService` and `MessageHandler` (gateway wiring, bot filtering, cooldown).
+  - `Pricing/` - `IMarketPriceProvider` and `IExchangeRateProvider` with their HTTP implementations, the samplers (`PriceSampler`, `ExchangeRateSampler`) and `LatestExchangeRate` (in-memory rate).
+  - `Configuration/` - options classes bound from appsettings.
+  - `Logging/` - Serilog bootstrap and host setup.
 
-All DI registration is in `ServiceCollectionExtensions.AddBranikBot()`. If the bot grows a second distinct feature, add feature folders inside the same project instead of new projects.
+All DI registration is in `ServiceCollectionExtensions.AddBranikBot()` in the host. A new project needs its `.csproj` added to the `COPY` lines in `src/BranikBot/Dockerfile`, otherwise the image build fails at restore.
 
 ### Message flow
 
@@ -60,7 +63,7 @@ Both providers are typed `HttpClient`s and are only called by the samplers.
 
 `PriceSampler` is a hosted service that calls `AkcniCenyProvider` once at startup and then every `Market:SampleInterval`. The provider scrapes akcniceny.cz (`//span[@itemprop='lowPrice']`) with HtmlAgilityPack and returns `null` on any failure. There is no fallback price: a failed sample stores nothing, so replies keep using the last real price.
 
-`ExchangeRateSampler` does the same for `CnbExchangeRateProvider` (CNB daily XML feed, returns `0m` on failure) every `ExchangeRate:SampleInterval`. The rate is kept only in memory in `LatestExchangeRate`: a failed sample changes nothing, so the last real rate stays in use, and after a restart there is no rate until the first successful sample.
+`ExchangeRateSampler` does the same for `CnbExchangeRateProvider` (CNB daily XML feed, returns `null` on failure) every `ExchangeRate:SampleInterval`. The rate is kept only in memory in `LatestExchangeRate`: a failed sample changes nothing, so the last real rate stays in use, and after a restart there is no rate until the first successful sample.
 
 `PriceHistoryStore` writes to the SQLite file at `Database:Path` (`data/branik.db`, a Docker volume in both compose files). The `price_history` table has one row per price period: an unchanged price only moves `last_seen_at` forward, a changed price inserts a new row. The table schema lives in `SqliteDatabase`, not in the store. New tables go into the schema in `SqliteDatabase`.
 
@@ -91,6 +94,6 @@ Both providers are typed `HttpClient`s and are only called by the samplers.
 
 - Do not modify the Dockerfile or CI workflows unless explicitly asked.
 - Do not add NuGet packages without asking.
-- Keep `Parsing/` and `Replies/` free of Discord and HTTP dependencies so they stay unit-testable.
-- Do not change the provider interfaces in `Pricing/` without discussing first.
+- Keep `BranikBot.Core` free of package and project references (no Discord, HTTP or SQLite) so it stays unit-testable.
+- Keep `BranikBot.Persistence` free of Discord and HTTP dependencies.
 - Security first - when convenience and security conflict, choose security. Deny by default, open selectively.

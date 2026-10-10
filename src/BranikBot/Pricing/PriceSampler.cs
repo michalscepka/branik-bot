@@ -1,4 +1,5 @@
 using BranikBot.Configuration;
+using BranikBot.Persistence;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

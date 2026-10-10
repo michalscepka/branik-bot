@@ -9,7 +9,6 @@
     <ItemGroup>
         <PackageReference Include="HtmlAgilityPack" />
         <PackageReference Include="JetBrains.Annotations" />
-        <PackageReference Include="Microsoft.Data.Sqlite" />
         <PackageReference Include="Microsoft.Extensions.Http" />
         <PackageReference Include="NetCord.Hosting" />
         <PackageReference Include="NetCord.Hosting.Services" />
@@ -18,6 +17,11 @@
         <PackageReference Include="Serilog.AspNetCore" />
         <PackageReference Include="Serilog.Sinks.Async" />
         <PackageReference Include="Serilog.Sinks.Console" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\BranikBot.Core\BranikBot.Core.csproj" />
+        <ProjectReference Include="..\BranikBot.Persistence\BranikBot.Persistence.csproj" />
     </ItemGroup>
 
     <ItemGroup>

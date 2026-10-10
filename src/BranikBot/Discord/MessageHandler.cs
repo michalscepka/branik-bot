@@ -1,6 +1,7 @@
 using System.Text;
 using BranikBot.Configuration;
 using BranikBot.Parsing;
+using BranikBot.Persistence;
 using BranikBot.Pricing;
 using BranikBot.Replies;
 using Microsoft.Extensions.Logging;

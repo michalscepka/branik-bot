@@ -1,7 +1,7 @@
 using BranikBot.Configuration;
 using BranikBot.Discord;
+using BranikBot.Persistence;
 using BranikBot.Pricing;
-using BranikBot.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NetCord.Gateway;
@@ -44,7 +44,8 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<IExchangeRateProvider, CnbExchangeRateProvider>();
 
         services.AddSingleton(TimeProvider.System);
-        services.AddSingleton<SqliteDatabase>();
+        services.AddSingleton(sp =>
+            new SqliteDatabase(sp.GetRequiredService<IOptions<DatabaseConfiguration>>().Value.Path));
         services.AddSingleton<PriceHistoryStore>();
         services.AddSingleton<LatestExchangeRate>();
         services.AddHostedService<PriceSampler>();

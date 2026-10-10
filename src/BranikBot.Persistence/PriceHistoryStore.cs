@@ -1,7 +1,7 @@
-using BranikBot.Storage;
+using BranikBot.Pricing;
 using Microsoft.Data.Sqlite;
 
-namespace BranikBot.Pricing;
+namespace BranikBot.Persistence;
 
 public class PriceHistoryStore(SqliteDatabase database)
 {

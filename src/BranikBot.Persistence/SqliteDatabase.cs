@@ -1,10 +1,8 @@
-using BranikBot.Configuration;
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Options;
 
-namespace BranikBot.Storage;
+namespace BranikBot.Persistence;
 
-public class SqliteDatabase(IOptions<DatabaseConfiguration> configuration)
+public class SqliteDatabase(string path)
 {
     private const string Schema =
         """
@@ -16,7 +14,7 @@ public class SqliteDatabase(IOptions<DatabaseConfiguration> configuration)
         );
         """;
 
-    private readonly string _connectionString = InitializeDatabase(configuration.Value.Path);
+    private readonly string _connectionString = InitializeDatabase(path);
 
     public SqliteConnection OpenConnection()
     {

@@ -1,5 +1,7 @@
 using BranikBot.Configuration;
+using BranikBot.Persistence;
 using BranikBot.Pricing;
+using BranikBot.Tests.Persistence;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;

@@ -1,6 +1,7 @@
+using BranikBot.Persistence;
 using BranikBot.Pricing;
 
-namespace BranikBot.Tests.Pricing;
+namespace BranikBot.Tests.Persistence;
 
 public sealed class PriceHistoryStoreTests : IDisposable
 {
