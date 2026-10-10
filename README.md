@@ -30,6 +30,7 @@
 -   **Sampled Prices**: The shop price and the EUR exchange rate are fetched in the background, so a reply never waits for an HTTP call. If a fetch fails, the last real value stays in use.
 -   **Price History**: Every price change is stored in a SQLite file that survives restarts.
 -   **Not Spammy**: Replies only to some messages, by chance, keeps a cooldown for the whole server after each reply and answers only the largest amount in a message.
+-   **Ask on Purpose**: Mention the bot with an amount and it always answers. Reply to someone else's message with just a mention and it answers for that message.
 -   **Trusted Bots**: Other bots are ignored by default. A server admin picks the ones to read with a slash command.
 -   **Dockerized**: Ready-to-use `docker-compose` setup for both production and local development.
 

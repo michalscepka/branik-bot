@@ -129,4 +129,33 @@ public sealed class ReplyBuilderTests : IDisposable
         Assert.DoesNotContain("250 kc", reply);
         Assert.DoesNotContain("400 kc", reply);
     }
+
+    [Fact]
+    public void Build_TextStartingWithUserMention_IgnoresTheIdInTheMention()
+    {
+        // Arrange
+        _priceHistoryStore.Record(100m, Now);
+        var builder = CreateBuilder(maxAmounts: 1);
+
+        // Act
+        var reply = builder.Build("<@1200554094708924426> 500 kc");
+
+        // Assert
+        Assert.NotNull(reply);
+        Assert.StartsWith("> 500 kc", reply);
+        Assert.Contains("To by stačilo na 5 dvoulitrovek Braníčka ve slevě!", reply);
+    }
+
+    [Fact]
+    public void Build_TextWithOnlyUserMention_ReturnsNull()
+    {
+        // Arrange
+        _priceHistoryStore.Record(100m, Now);
+
+        // Act
+        var reply = _builder.Build("<@1200554094708924426>");
+
+        // Assert
+        Assert.Null(reply);
+    }
 }

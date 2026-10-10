@@ -1,7 +1,9 @@
+using System.Net;
 using BranikBot.Persistence;
 using BranikBot.Replies;
 using Microsoft.Extensions.Logging;
 using NetCord.Gateway;
+using NetCord.Rest;
 
 namespace BranikBot.Discord;
 
@@ -24,7 +26,10 @@ public class MessageHandler(
             return;
 
         var guildId = message.GuildId.Value;
-        if (replyCooldown.IsActive(guildId))
+
+        var isMentioned = message.MentionedUsers.Any(user => user.Id == gatewayClient.Id);
+
+        if (!isMentioned && replyCooldown.IsActive(guildId))
         {
             logger.LogDebug("Cooldown active for guild {GuildId}, ignoring message {MessageId}.", guildId, message.Id);
             return;
@@ -32,44 +37,90 @@ public class MessageHandler(
 
         try
         {
-            // Bots are ignored unless an admin of this guild trusted them.
-            var isBot = message.Author.IsBot;
-            if (isBot && !trustedBotStore.IsTrusted(guildId, message.Author.Id))
-            {
-                logger.LogDebug("Ignoring message {MessageId} from untrusted bot {BotId} in guild {GuildId}.", message.Id, message.Author.Id, guildId);
-                return;
-            }
+            var reply = await BuildReplyAsync(message, guildId);
 
-            var content = isBot
-                ? await botMessageReader.ReadAsync(message)
-                : message.Content;
+            if (reply is null && isMentioned && message.ReferencedMessage is not null)
+                reply = await BuildReplyAsync(message.ReferencedMessage, guildId);
 
-            var reply = replyBuilder.Build(content);
             if (reply is null)
             {
-                logger.LogDebug("Nothing to reply to in message {MessageId} in guild {GuildId}.", message.Id, guildId);
+                logger.LogDebug("Nothing to reply to in message {MessageId} in guild {GuildId}.", message.Id,
+                    guildId);
                 return;
             }
 
-            if (!replyChance.Roll())
-            {
-                logger.LogInformation("Reply chance skipped message {MessageId} in guild {GuildId}.", message.Id, guildId);
+            if (!isMentioned && !PassesChanceAndCooldown(message, guildId))
                 return;
-            }
 
-            if (!replyCooldown.TryStart(guildId))
-            {
-                logger.LogInformation("Cooldown active for guild {GuildId}, skipping reply to message {MessageId}.", guildId, message.Id);
-                return;
-            }
+            logger.LogInformation(
+                "Replying to message {MessageId} in channel {ChannelId} of guild {GuildId} (mentioned: {IsMentioned}).",
+                message.Id, message.ChannelId, guildId, isMentioned);
 
-            logger.LogInformation("Replying to message {MessageId} in channel {ChannelId} of guild {GuildId}.", message.Id, message.ChannelId, guildId);
-
-            await gatewayClient.Rest.SendMessageAsync(message.ChannelId, reply);
+            await SendReplyAsync(message, reply);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error processing message in channel {ChannelId}", message.ChannelId);
+        }
+    }
+
+    private async ValueTask<string?> BuildReplyAsync(RestMessage message, ulong guildId)
+    {
+        if (message.Author.Id == gatewayClient.Id)
+            return null;
+
+        var isBot = message.Author.IsBot;
+        if (isBot && !trustedBotStore.IsTrusted(guildId, message.Author.Id))
+        {
+            logger.LogDebug("Ignoring message {MessageId} from untrusted bot {BotId} in guild {GuildId}.",
+                message.Id, message.Author.Id, guildId);
+            return null;
+        }
+
+        var content = isBot
+            ? await botMessageReader.ReadAsync(message)
+            : message.Content;
+
+        return replyBuilder.Build(content);
+    }
+
+    private bool PassesChanceAndCooldown(Message message, ulong guildId)
+    {
+        if (!replyChance.Roll())
+        {
+            logger.LogInformation("Reply chance skipped message {MessageId} in guild {GuildId}.", message.Id, guildId);
+            return false;
+        }
+
+        if (!replyCooldown.TryStart(guildId))
+        {
+            logger.LogInformation("Cooldown active for guild {GuildId}, skipping reply to message {MessageId}.", guildId, message.Id);
+            return false;
+        }
+
+        return true;
+    }
+
+    private async ValueTask SendReplyAsync(Message message, string reply)
+    {
+        var properties = new MessageProperties
+        {
+            Content = reply,
+            AllowedMentions = AllowedMentionsProperties.None,
+            MessageReference = MessageReferenceProperties.Reply(message.Id, failIfNotExists: false)
+        };
+
+        try
+        {
+            await gatewayClient.Rest.SendMessageAsync(message.ChannelId, properties);
+        }
+        catch (RestException ex) when (ex.StatusCode is HttpStatusCode.Forbidden)
+        {
+            // Replying needs the Read Message History permission. Without it the answer is sent on its own.
+            logger.LogWarning("Not allowed to reply to message {MessageId} in channel {ChannelId}, sending a plain message.", message.Id, message.ChannelId);
+
+            properties.MessageReference = null;
+            await gatewayClient.Rest.SendMessageAsync(message.ChannelId, properties);
         }
     }
 }

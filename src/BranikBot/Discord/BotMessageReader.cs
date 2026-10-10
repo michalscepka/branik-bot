@@ -33,7 +33,7 @@ public class BotMessageReader(GatewayClient gatewayClient, ILogger<BotMessageRea
         })
         .Build();
 
-    public async ValueTask<string> ReadAsync(Message message)
+    public async ValueTask<string> ReadAsync(RestMessage message)
     {
         var restMessage = await _pipeline.ExecuteAsync(async ct =>
             await gatewayClient.Rest.GetMessageAsync(message.ChannelId, message.Id, cancellationToken: ct));
