@@ -193,7 +193,6 @@ public class AmountParserTests
 
     [Theory]
     [InlineData("5 tisíciletí")] // Millennia
-    [InlineData("2 tisícovky")]
     [InlineData("3 milí lidé")]
     [InlineData("3 milenci")]
     [InlineData("2 miliardáři")]
@@ -242,5 +241,173 @@ public class AmountParserTests
 
         var amount = Assert.Single(result);
         Assert.Equal(1_000_000_000_000_000_000m, amount.Amount);
+    }
+
+    [Theory]
+    [InlineData("1 dvacka", 20)]
+    [InlineData("2 dvacky", 40)]
+    [InlineData("10 dvacek", 200)]
+    [InlineData("1 stovka", 100)]
+    [InlineData("2 stovky", 200)]
+    [InlineData("5 stovek", 500)]
+    [InlineData("5stovek", 500)]
+    [InlineData("4 dvoustovky", 800)]
+    [InlineData("5 dvoustovek", 1_000)]
+    [InlineData("2 pětistovky", 1_000)]
+    [InlineData("6 pětistovek", 3_000)]
+    [InlineData("3 tisícovky", 3_000)]
+    [InlineData("10 tisícovek", 10_000)]
+    [InlineData("3 dvoutisícovky", 6_000)]
+    [InlineData("5 dvoutisícovek", 10_000)]
+    [InlineData("2 pětitisícovky", 10_000)]
+    [InlineData("5 pětitisícovek", 25_000)]
+    [InlineData("1 tác", 1_000)]
+    [InlineData("2 táce", 2_000)]
+    [InlineData("5 táců", 5_000)]
+    [InlineData("1 meloun", 1_000_000)]
+    [InlineData("3 melouny", 3_000_000)]
+    [InlineData("10 melounů", 10_000_000)]
+    [InlineData("1,5 melounu", 1_500_000)]
+    public void ExtractAmounts_NumberWithSlang_ReturnsMultipliedCzkAmount(string input, decimal expectedAmount)
+    {
+        var result = input.ExtractAmounts();
+
+        var amount = Assert.Single(result);
+        Assert.Equal(expectedAmount, amount.Amount);
+        Assert.Equal(Currency.Czk, amount.Currency);
+        Assert.Equal(input, amount.OriginalText);
+    }
+
+    [Theory]
+    [InlineData("dvacka", 20)]
+    [InlineData("dvacku", 20)]
+    [InlineData("stovka", 100)]
+    [InlineData("stovku", 100)]
+    [InlineData("dvoustovka", 200)]
+    [InlineData("dvoustovku", 200)]
+    [InlineData("pětistovka", 500)]
+    [InlineData("pětistovku", 500)]
+    [InlineData("tisícovka", 1_000)]
+    [InlineData("tisícovku", 1_000)]
+    [InlineData("dvoutisícovka", 2_000)]
+    [InlineData("dvoutisícovku", 2_000)]
+    [InlineData("pětitisícovka", 5_000)]
+    [InlineData("pětitisícovku", 5_000)]
+    [InlineData("STOVKA", 100)]
+    [InlineData("Pětistovka", 500)]
+    public void ExtractAmounts_SlangWithoutNumber_ReturnsOneDenomination(string input, decimal expectedAmount)
+    {
+        var result = input.ExtractAmounts();
+
+        var amount = Assert.Single(result);
+        Assert.Equal(expectedAmount, amount.Amount);
+        Assert.Equal(Currency.Czk, amount.Currency);
+        Assert.Equal(input, amount.OriginalText);
+    }
+
+    [Theory]
+    [InlineData("stovka euro", 100, Currency.Eur)]
+    [InlineData("pětistovku eur", 500, Currency.Eur)]
+    [InlineData("5 stovek euro", 500, Currency.Eur)]
+    [InlineData("2 táce eur", 2_000, Currency.Eur)]
+    [InlineData("3 melouny €", 3_000_000, Currency.Eur)]
+    [InlineData("2 stovky korun", 200, Currency.Czk)]
+    public void ExtractAmounts_SlangWithCurrency_ReturnsCurrencyAndWholeText(
+        string input, decimal expectedAmount, Currency expectedCurrency)
+    {
+        var result = input.ExtractAmounts();
+
+        var amount = Assert.Single(result);
+        Assert.Equal(expectedAmount, amount.Amount);
+        Assert.Equal(expectedCurrency, amount.Currency);
+        Assert.Equal(input, amount.OriginalText);
+    }
+
+    [Theory]
+    [InlineData("Půjč mi stovku, prosím.", "stovku", 100)]
+    [InlineData("Stálo to pětistovku.", "pětistovku", 500)]
+    [InlineData("To je tisícovka!", "tisícovka", 1_000)]
+    [InlineData("Dal jsem za to 2 táce a nelituju.", "2 táce", 2_000)]
+    [InlineData("Barák za 8 melounů, no nekup to.", "8 melounů", 8_000_000)]
+    public void ExtractAmounts_SlangInsideSentence_QuotesOnlyTheAmount(
+        string input, string expectedText, decimal expectedAmount)
+    {
+        var result = input.ExtractAmounts();
+
+        var amount = Assert.Single(result);
+        Assert.Equal(expectedText, amount.OriginalText);
+        Assert.Equal(expectedAmount, amount.Amount);
+    }
+
+    [Theory]
+    // Plurals without a number are not an amount
+    [InlineData("stovky lidí")]
+    [InlineData("tisícovky fanoušků")]
+    [InlineData("pár dvacek")]
+    // Fruit and trays
+    [InlineData("koupil jsem meloun")]
+    [InlineData("melouny jsou v akci")]
+    [InlineData("podej mi tác")]
+    [InlineData("2 tácky")]
+    [InlineData("3 melounové dorty")]
+    // Longer words that contain a slang word
+    [InlineData("stovkař")]
+    [InlineData("šestistovka")]
+    [InlineData("tisícovkami")]
+    // Left out on purpose
+    [InlineData("pade")]
+    [InlineData("při pádě")]
+    [InlineData("kilo")]
+    [InlineData("litr")]
+    public void ExtractAmounts_SlangLookAlike_ReturnsEmpty(string input)
+    {
+        var result = input.ExtractAmounts();
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void ExtractAmounts_SlangWithAndWithoutNumber_ReturnsBoth()
+    {
+        var input = "Dlužíš mi stovku a já tobě 3 stovky.";
+
+        var result = input.ExtractAmounts().ToList();
+
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, a => a is { Amount: 100, OriginalText: "stovku" });
+        Assert.Contains(result, a => a is { Amount: 300, OriginalText: "3 stovky" });
+    }
+
+    [Theory]
+    [InlineData("20 tisic", 20_000)]
+    [InlineData("5 milionu", 5_000_000)]
+    [InlineData("5 MILIONŮ", 5_000_000)]
+    [InlineData("100 Kc", 100)]
+    [InlineData("100 KČ", 100)]
+    [InlineData("petistovka", 500)]
+    [InlineData("3 tisicovky", 3_000)]
+    [InlineData("5 tacu", 5_000)]
+    [InlineData("10 melounu", 10_000_000)]
+    public void ExtractAmounts_WithOrWithoutDiacritics_ReturnsSameAmountAndKeepsOriginalText(
+        string input, decimal expectedAmount)
+    {
+        var result = input.ExtractAmounts();
+
+        var amount = Assert.Single(result);
+        Assert.Equal(expectedAmount, amount.Amount);
+        Assert.Equal(input, amount.OriginalText);
+    }
+
+    [Theory]
+    [InlineData("🍺 dej mi stovku 🍺", "stovku")]
+    [InlineData("🍺🍺🍺 20 tisíc Kč 🎉", "20 tisíc Kč")]
+    [InlineData("Žluťoučký kůň úpěl za 5 táců", "5 táců")]
+    public void ExtractAmounts_MessageWithEmojiOrAccents_QuotesTextFromTheOriginalMessage(
+        string input, string expectedText)
+    {
+        var result = input.ExtractAmounts();
+
+        var amount = Assert.Single(result);
+        Assert.Equal(expectedText, amount.OriginalText);
     }
 }
