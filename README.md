@@ -29,7 +29,7 @@
 -   **Market Comparison**: Calculates how many Braník 2l bottles, parcels or pallets the amount would buy at the current shop price.
 -   **Sampled Prices**: The shop price and the EUR exchange rate are fetched in the background, so a reply never waits for an HTTP call. If a fetch fails, the last real value stays in use.
 -   **Price History**: Every price change is stored in a SQLite file that survives restarts.
--   **Cooldown System**: Prevents spam by enforcing a cooldown period per channel and answering only the largest amount in a message.
+-   **Not Spammy**: Replies only to some messages, by chance, keeps a cooldown for the whole server after each reply and answers only the largest amount in a message.
 -   **Trusted Bots**: Other bots are ignored by default. A server admin picks the ones to read with a slash command.
 -   **Dockerized**: Ready-to-use `docker-compose` setup for both production and local development.
 
@@ -82,7 +82,8 @@ Optional settings, with their defaults from `appsettings.json`:
 
 | Variable | Default | Description |
 | :--- | :--- | :--- |
-| `Discord__ChannelCooldown` | `00:05:00` | Minimum time between two replies in one channel. |
+| `Discord__ReplyCooldown` | `00:02:00` | Minimum time between two replies on one server. |
+| `Discord__ReplyChance` | `0.25` | Chance that a message with an amount gets a reply (0-1). |
 | `Discord__MaxAmountsPerReply` | `1` | How many amounts from one message get an answer, largest first (1-10). |
 | `Market__SampleInterval` | `06:00:00` | How often the shop price is fetched. |
 | `ExchangeRate__SampleInterval` | `06:00:00` | How often the EUR exchange rate is fetched. |

@@ -57,9 +57,12 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<PriceSamplingBackgroundService>();
         services.AddHostedService<ExchangeRateSamplingBackgroundService>();
 
-        services.AddSingleton(sp => new ChannelCooldown(
-            sp.GetRequiredService<IOptions<DiscordConfiguration>>().Value.ChannelCooldown,
+        services.AddSingleton(sp => new ReplyCooldown(
+            sp.GetRequiredService<IOptions<DiscordConfiguration>>().Value.ReplyCooldown,
             sp.GetRequiredService<TimeProvider>()));
+        services.AddSingleton(sp => new ReplyChance(
+            sp.GetRequiredService<IOptions<DiscordConfiguration>>().Value.ReplyChance,
+            Random.Shared));
         services.AddSingleton<BotMessageReader>();
         services.AddSingleton<ReplyBuilder>();
         services.AddSingleton<MessageHandler>();

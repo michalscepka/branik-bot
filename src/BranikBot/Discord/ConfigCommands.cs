@@ -20,8 +20,10 @@ public class ConfigCommands(
     public InteractionMessageProperties AddBot(
         [SlashCommandParameter(Name = "bot", Description = "Bot, jehož zprávy se mají číst")] User bot)
     {
-        if (Context.Interaction.GuildId is not { } guildId)
+        if (Context.Interaction.GuildId is null)
             return Reply(GuildOnly);
+
+        var guildId = Context.Interaction.GuildId.Value;
 
         if (!bot.IsBot)
             return Reply($"<@{bot.Id}> není bot. Zprávy lidí čtu vždy.");
@@ -42,8 +44,10 @@ public class ConfigCommands(
     public InteractionMessageProperties RemoveBot(
         [SlashCommandParameter(Name = "bot", Description = "Bot, jehož zprávy se mají přestat číst")] User bot)
     {
-        if (Context.Interaction.GuildId is not { } guildId)
+        if (Context.Interaction.GuildId is null)
             return Reply(GuildOnly);
+
+        var guildId = Context.Interaction.GuildId.Value;
 
         if (!trustedBotStore.Remove(guildId, bot.Id))
             return Reply($"Zprávy bota <@{bot.Id}> nečtu.");
@@ -57,8 +61,10 @@ public class ConfigCommands(
     [SubSlashCommand("bot-list", "Vypíše boty, jejichž zprávy Braník Bot čte")]
     public InteractionMessageProperties ListBots()
     {
-        if (Context.Interaction.GuildId is not { } guildId)
+        if (Context.Interaction.GuildId is null)
             return Reply(GuildOnly);
+
+        var guildId = Context.Interaction.GuildId.Value;
 
         var botIds = trustedBotStore.List(guildId);
         if (botIds.Count == 0)

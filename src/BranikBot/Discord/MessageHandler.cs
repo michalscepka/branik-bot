@@ -10,7 +10,8 @@ public class MessageHandler(
     BotMessageReader botMessageReader,
     TrustedBotStore trustedBotStore,
     ReplyBuilder replyBuilder,
-    ChannelCooldown channelCooldown,
+    ReplyCooldown replyCooldown,
+    ReplyChance replyChance,
     ILogger<MessageHandler> logger)
 {
     public async ValueTask ProcessIncomingMessage(Message message)
@@ -19,14 +20,25 @@ public class MessageHandler(
         if (message.Author.Id == gatewayClient.Id)
             return;
 
-        if (channelCooldown.IsActive(message.ChannelId))
+        if (message.GuildId is null)
             return;
+
+        var guildId = message.GuildId.Value;
+        if (replyCooldown.IsActive(guildId))
+        {
+            logger.LogDebug("Cooldown active for guild {GuildId}, ignoring message {MessageId}.", guildId, message.Id);
+            return;
+        }
 
         try
         {
+            // Bots are ignored unless an admin of this guild trusted them.
             var isBot = message.Author.IsBot;
-            if (isBot && !IsTrustedBot(message))
+            if (isBot && !trustedBotStore.IsTrusted(guildId, message.Author.Id))
+            {
+                logger.LogDebug("Ignoring message {MessageId} from untrusted bot {BotId} in guild {GuildId}.", message.Id, message.Author.Id, guildId);
                 return;
+            }
 
             var content = isBot
                 ? await botMessageReader.ReadAsync(message)
@@ -34,16 +46,24 @@ public class MessageHandler(
 
             var reply = replyBuilder.Build(content);
             if (reply is null)
-                return;
-
-            if (!channelCooldown.TryStart(message.ChannelId))
             {
-                logger.LogInformation("Cooldown active for channel {ChannelId}, skipping response.", message.ChannelId);
+                logger.LogDebug("Nothing to reply to in message {MessageId} in guild {GuildId}.", message.Id, guildId);
                 return;
             }
 
-            logger.LogInformation("Replying to message {MessageId} in channel {ChannelId}.", message.Id,
-                message.ChannelId);
+            if (!replyChance.Roll())
+            {
+                logger.LogInformation("Reply chance skipped message {MessageId} in guild {GuildId}.", message.Id, guildId);
+                return;
+            }
+
+            if (!replyCooldown.TryStart(guildId))
+            {
+                logger.LogInformation("Cooldown active for guild {GuildId}, skipping reply to message {MessageId}.", guildId, message.Id);
+                return;
+            }
+
+            logger.LogInformation("Replying to message {MessageId} in channel {ChannelId} of guild {GuildId}.", message.Id, message.ChannelId, guildId);
 
             await gatewayClient.Rest.SendMessageAsync(message.ChannelId, reply);
         }
@@ -52,7 +72,4 @@ public class MessageHandler(
             logger.LogError(ex, "Error processing message in channel {ChannelId}", message.ChannelId);
         }
     }
-
-    private bool IsTrustedBot(Message message) =>
-        message.GuildId is { } guildId && trustedBotStore.IsTrusted(guildId, message.Author.Id);
 }
