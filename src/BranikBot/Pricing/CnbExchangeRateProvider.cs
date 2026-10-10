@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Xml.Linq;
 using BranikBot.Configuration;
+using BranikBot.Pricing.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 

@@ -37,33 +37,35 @@ Three projects plus `BranikBot.Tests` (xUnit + Moq, references all of them). Ref
 
 - `BranikBot.Core` - pure logic with no package references and no project references. Its root namespace is `BranikBot`, so namespaces follow the folders (`BranikBot.Parsing`, `BranikBot.Replies`, `BranikBot.Pricing`).
   - `Parsing/` - `AmountParser` and the `UserInput` record it produces.
-  - `Replies/` - `MessageFormatter`, `BranikCalculator` (bottles / parcels of 6 / pallets of 100 parcels), the Czech reply templates in `Messages.cs` and the plural helpers.
+  - `Replies/` - `MessageFormatter`, `ChannelCooldown`, `BranikCalculator` (bottles / parcels of 6 / pallets of 100 parcels), the Czech reply templates in `Messages.cs` and the plural helpers.
   - `Pricing/` - the shared `Currency` enum and `PricePeriod` record.
 - `BranikBot.Persistence` - SQLite access, references Core. `SqliteDatabase` owns the file, the schema of every table and opens connections. Stores such as `PriceHistoryStore` only hold queries. It takes plain values (the file path), not options classes.
-- `BranikBot` - the host, references both. The code is grouped by what it does:
-  - `Discord/` - `DiscordBackgroundService` and `MessageHandler` (gateway wiring, bot filtering, cooldown).
-  - `Pricing/` - `IMarketPriceProvider` and `IExchangeRateProvider` with their HTTP implementations, the samplers (`PriceSampler`, `ExchangeRateSampler`) and `LatestExchangeRate` (in-memory rate).
+- `BranikBot` - the host, references both. The project root holds only `Program.cs`. The rest is grouped by what it does:
+  - `Discord/` - everything that needs a NetCord type: `DiscordBackgroundService` (gateway wiring), `MessageHandler` (bot filtering and orchestration) and `EuroChampionMessageReader`.
+  - `Replies/` - `ReplyBuilder`, which has no NetCord dependency. Same namespace as `Replies/` in Core.
+  - `Pricing/` - the HTTP providers (`AkcniCenyProvider`, `CnbExchangeRateProvider`), their interfaces `IMarketPriceProvider` and `IExchangeRateProvider` in `Pricing/Abstractions/`, the samplers (`PriceSamplingBackgroundService`, `ExchangeRateSamplingBackgroundService`) and `LatestExchangeRate` (in-memory rate).
   - `Configuration/` - options classes bound from appsettings.
   - `Logging/` - Serilog bootstrap and host setup.
+  - `Extensions/` - `ServiceCollectionExtensions`.
 
 All DI registration is in `ServiceCollectionExtensions.AddBranikBot()` in the host. A new project needs its `.csproj` added to the `COPY` lines in `src/BranikBot/Dockerfile`, otherwise the image build fails at restore.
 
 ### Message flow
 
 1. `DiscordBackgroundService` subscribes `MessageHandler.ProcessIncomingMessage` to NetCord's `GatewayClient.MessageCreate`. The gateway needs the `GuildMessages | MessageContent` intents.
-2. `MessageHandler` ignores its own messages and all other bots, except the one whose ID is `Discord:EuroChampionId`. For that bot the gateway payload arrives before its content is final, so the handler re-fetches the message over REST through a Polly pipeline (retry every 1s, up to 30 times, while `Flags != 0`) and flattens content + embeds (title, description, fields, footer) into one string.
-3. `AmountParser.ExtractAmounts` (regex) turns text into `UserInput` records. It handles a number plus a currency suffix, `k` (thousands) and `mega` (millions) with an optional suffix. No suffix means CZK. Results are de-duplicated via a `HashSet`.
-4. Per-channel cooldown (`Discord:ChannelCooldown`) is an in-memory dictionary on the singleton handler. It is checked only after amounts were found, and set only after a reply was sent.
-5. `MessageHandler` reads the latest price from `PriceHistoryStore` and the EUR rate from `LatestExchangeRate`, so replying never makes an HTTP call for either. If no price was ever stored, it logs a warning and sends no reply.
+2. `MessageHandler` ignores its own messages and all other bots, except the one whose ID is `Discord:EuroChampionId`. For that bot the gateway payload arrives before its content is final, so `EuroChampionMessageReader` re-fetches the message over REST through a Polly pipeline (retry every 1s, up to 30 times, while `Flags != 0`) and flattens content + embeds (title, description, fields, footer) into one string.
+3. `ReplyBuilder.Build` turns the text into a reply, or `null` when there is nothing to say. It calls `AmountParser.ExtractAmounts` (regex), which produces `UserInput` records. The parser handles a number plus a currency suffix, `k` (thousands) and `mega` (millions) with an optional suffix. No suffix means CZK. Results are de-duplicated via a `HashSet`.
+4. `ReplyBuilder` reads the latest price from `PriceHistoryStore` and the EUR rate from `LatestExchangeRate`, so replying never makes an HTTP call for either. If no price was ever stored, it logs a warning and returns `null`.
+5. Per-channel cooldown (`Discord:ChannelCooldown`) is the in-memory singleton `ChannelCooldown`. `TryStart` checks and starts it in one step, only after a reply was built and before it is sent, so a failed send still starts the cooldown.
 6. `MessageFormatter` (static, no dependencies) converts EUR with the rate it is given and leaves EUR amounts out when there is none, so a message with only EUR amounts gets no reply. It picks the reply tier by bottle count: bottles (<100), parcels (<1000), pallets (<100 000), otherwise the "too rich" message. Czech plural forms come from the `extension(int)` block in `StringExtensions`.
 
 Both providers are typed `HttpClient`s and are only called by the samplers.
 
 ### Sampled prices
 
-`PriceSampler` is a hosted service that calls `AkcniCenyProvider` once at startup and then every `Market:SampleInterval`. The provider scrapes akcniceny.cz (`//span[@itemprop='lowPrice']`) with HtmlAgilityPack and returns `null` on any failure. There is no fallback price: a failed sample stores nothing, so replies keep using the last real price.
+`PriceSamplingBackgroundService` is a hosted service that calls `AkcniCenyProvider` once at startup and then every `Market:SampleInterval`. The provider scrapes akcniceny.cz (`//span[@itemprop='lowPrice']`) with HtmlAgilityPack and returns `null` on any failure. There is no fallback price: a failed sample stores nothing, so replies keep using the last real price.
 
-`ExchangeRateSampler` does the same for `CnbExchangeRateProvider` (CNB daily XML feed, returns `null` on failure) every `ExchangeRate:SampleInterval`. The rate is kept only in memory in `LatestExchangeRate`: a failed sample changes nothing, so the last real rate stays in use, and after a restart there is no rate until the first successful sample.
+`ExchangeRateSamplingBackgroundService` does the same for `CnbExchangeRateProvider` (CNB daily XML feed, returns `null` on failure) every `ExchangeRate:SampleInterval`. The rate is kept only in memory in `LatestExchangeRate`: a failed sample changes nothing, so the last real rate stays in use, and after a restart there is no rate until the first successful sample.
 
 `PriceHistoryStore` writes to the SQLite file at `Database:Path` (`data/branik.db`, a Docker volume in both compose files). The `price_history` table has one row per price period: an unchanged price only moves `last_seen_at` forward, a changed price inserts a new row. The table schema lives in `SqliteDatabase`, not in the store. New tables go into the schema in `SqliteDatabase`.
 
@@ -97,3 +99,4 @@ Both providers are typed `HttpClient`s and are only called by the samplers.
 - Keep `BranikBot.Core` free of package and project references (no Discord, HTTP or SQLite) so it stays unit-testable.
 - Keep `BranikBot.Persistence` free of Discord and HTTP dependencies.
 - Security first - when convenience and security conflict, choose security. Deny by default, open selectively.
+- Never log message content or usernames. Log IDs (message, channel) only.

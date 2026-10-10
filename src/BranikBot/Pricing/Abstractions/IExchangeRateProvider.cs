@@ -1,4 +1,4 @@
-namespace BranikBot.Pricing;
+namespace BranikBot.Pricing.Abstractions;
 
 public interface IExchangeRateProvider
 {

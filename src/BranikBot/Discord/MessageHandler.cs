@@ -1,51 +1,20 @@
-using System.Text;
 using BranikBot.Configuration;
-using BranikBot.Parsing;
-using BranikBot.Persistence;
-using BranikBot.Pricing;
 using BranikBot.Replies;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NetCord.Gateway;
-using NetCord.Rest;
-using Polly;
-using Polly.Retry;
 
 namespace BranikBot.Discord;
 
 public class MessageHandler(
     GatewayClient gatewayClient,
-    PriceHistoryStore priceHistoryStore,
-    LatestExchangeRate latestExchangeRate,
+    EuroChampionMessageReader euroChampionMessageReader,
+    ReplyBuilder replyBuilder,
+    ChannelCooldown channelCooldown,
     IOptions<DiscordConfiguration> discordConfiguration,
     ILogger<MessageHandler> logger)
 {
-    private readonly DiscordConfiguration _discordConfig = discordConfiguration.Value;
-    private readonly Dictionary<ulong, DateTime> _lastMessageTimestamps = [];
-    private readonly Lock _cooldownLock = new();
-    private const int RetryAttempts = 30;
-    private const int RetryDelay = 1;
-
-    private readonly ResiliencePipeline<RestMessage> _botMessagePipeline = new ResiliencePipelineBuilder<RestMessage>()
-        .AddRetry(new RetryStrategyOptions<RestMessage>
-        {
-            ShouldHandle = new PredicateBuilder<RestMessage>()
-                .HandleResult(m => m.Flags != 0),
-            BackoffType = DelayBackoffType.Constant,
-            Delay = TimeSpan.FromSeconds(RetryDelay),
-            MaxRetryAttempts = RetryAttempts,
-            OnRetry = args =>
-            {
-                logger.LogInformation("Retry for Euro Champion (Attempt {Attempt} of {RetryAttempts}).",
-                    args.AttemptNumber + 1, RetryAttempts);
-
-                if (args.AttemptNumber >= RetryAttempts)
-                    logger.LogWarning("Max retries reached for Euro Champion message. Moving on with current content.");
-
-                return default;
-            }
-        })
-        .Build();
+    private readonly ulong _euroChampionId = discordConfiguration.Value.EuroChampionId;
 
     public async ValueTask ProcessIncomingMessage(Message message)
     {
@@ -53,102 +22,34 @@ public class MessageHandler(
         if (message.Author.Id == gatewayClient.Id)
             return;
 
-        if (message.Author.IsBot && message.Author.Id != _discordConfig.EuroChampionId)
+        var isEuroChampion = message.Author.Id == _euroChampionId;
+        if (message.Author.IsBot && !isEuroChampion)
             return;
 
         try
         {
-            var content = message.Content;
+            var content = isEuroChampion
+                ? await euroChampionMessageReader.ReadAsync(message)
+                : message.Content;
 
-            if (message.Author.Id == _discordConfig.EuroChampionId)
-                content = await GetEuroChampionMessage(message);
-
-            logger.LogInformation("[{ChannelId}] {Username}: {Content}", message.ChannelId, message.Author.Username,
-                content);
-
-            var amounts = content.ExtractAmounts().ToList();
-            if (amounts.Count is 0)
+            var reply = replyBuilder.Build(content);
+            if (reply is null)
                 return;
 
-            if (IsChannelOnCooldown(message.ChannelId))
+            if (!channelCooldown.TryStart(message.ChannelId))
             {
                 logger.LogInformation("Cooldown active for channel {ChannelId}, skipping response.", message.ChannelId);
                 return;
             }
 
-            var marketPrice = priceHistoryStore.GetLatest()?.Price;
-            if (marketPrice is null)
-            {
-                logger.LogWarning("No market price stored yet, skipping response in channel {ChannelId}.",
-                    message.ChannelId);
-                return;
-            }
+            logger.LogInformation("Replying to message {MessageId} in channel {ChannelId}.", message.Id,
+                message.ChannelId);
 
-            var euroExchangeRate = latestExchangeRate.Get(Currency.Eur);
-            if (euroExchangeRate is null && amounts.Any(a => a.Currency is Currency.Eur))
-            {
-                logger.LogWarning("No EUR exchange rate sampled yet, skipping EUR amounts in channel {ChannelId}.",
-                    message.ChannelId);
-            }
-
-            var chatMessage = MessageFormatter.FormatMessage(amounts, marketPrice.Value, euroExchangeRate);
-            if (chatMessage.Length is 0)
-                return;
-
-            await gatewayClient.Rest.SendMessageAsync(message.ChannelId, chatMessage);
-
-            SetChannelCooldown(message.ChannelId);
+            await gatewayClient.Rest.SendMessageAsync(message.ChannelId, reply);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error processing message in channel {ChannelId}", message.ChannelId);
-        }
-    }
-
-    private async ValueTask<string> GetEuroChampionMessage(Message message)
-    {
-        var restMessage = await _botMessagePipeline.ExecuteAsync(async ct =>
-            await gatewayClient.Rest.GetMessageAsync(message.ChannelId, message.Id, cancellationToken: ct));
-
-        var sb = new StringBuilder(restMessage.Content);
-        foreach (var embed in restMessage.Embeds)
-        {
-            sb.AppendLine(embed.Title);
-            sb.AppendLine(embed.Description);
-            foreach (var field in embed.Fields)
-            {
-                sb.AppendLine(field.Name);
-                sb.AppendLine(field.Value);
-            }
-
-            if (embed.Footer != null)
-                sb.AppendLine(embed.Footer.Text);
-        }
-
-        return sb.ToString();
-    }
-
-    private bool IsChannelOnCooldown(ulong channelId)
-    {
-        var utcNow = DateTime.UtcNow;
-        var cooldown = _discordConfig.ChannelCooldown;
-
-        lock (_cooldownLock)
-        {
-            if (!_lastMessageTimestamps.TryGetValue(channelId, out var lastSent))
-                return false;
-
-            return utcNow - lastSent < cooldown;
-        }
-    }
-
-    private void SetChannelCooldown(ulong channelId)
-    {
-        var utcNow = DateTime.UtcNow;
-
-        lock (_cooldownLock)
-        {
-            _lastMessageTimestamps[channelId] = utcNow;
         }
     }
 }

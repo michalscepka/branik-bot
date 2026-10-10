@@ -1,17 +1,17 @@
 using BranikBot.Configuration;
-using BranikBot.Persistence;
+using BranikBot.Pricing.Abstractions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace BranikBot.Pricing;
 
-public class PriceSampler(
-    IMarketPriceProvider marketPriceProvider,
-    PriceHistoryStore priceHistoryStore,
+public class ExchangeRateSamplingBackgroundService(
+    IExchangeRateProvider exchangeRateProvider,
+    LatestExchangeRate latestExchangeRate,
     TimeProvider timeProvider,
-    IOptions<MarketConfiguration> configuration,
-    ILogger<PriceSampler> logger) : BackgroundService
+    IOptions<ExchangeRateConfiguration> configuration,
+    ILogger<ExchangeRateSamplingBackgroundService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -27,15 +27,15 @@ public class PriceSampler(
     {
         try
         {
-            var price = await marketPriceProvider.GetPriceAsync();
-            if (price is null)
+            var rate = await exchangeRateProvider.GetExchangeRateAsync(Currency.Eur);
+            if (rate is not > 0)
                 return;
 
-            priceHistoryStore.Record(price.Value, timeProvider.GetUtcNow());
+            latestExchangeRate.Set(Currency.Eur, rate.Value);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to store the market price sample");
+            logger.LogError(ex, "Failed to sample the exchange rate");
         }
     }
 }

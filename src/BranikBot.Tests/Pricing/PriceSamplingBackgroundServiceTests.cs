@@ -1,6 +1,7 @@
 using BranikBot.Configuration;
 using BranikBot.Persistence;
 using BranikBot.Pricing;
+using BranikBot.Pricing.Abstractions;
 using BranikBot.Tests.Persistence;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -8,7 +9,7 @@ using Moq;
 
 namespace BranikBot.Tests.Pricing;
 
-public sealed class PriceSamplerTests : IDisposable
+public sealed class PriceSamplingBackgroundServiceTests : IDisposable
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 10, 8, 0, 0, TimeSpan.Zero);
 
@@ -16,9 +17,9 @@ public sealed class PriceSamplerTests : IDisposable
     private readonly PriceHistoryStore _store;
     private readonly Mock<IMarketPriceProvider> _providerMock = new();
     private readonly Mock<TimeProvider> _timeProviderMock = new();
-    private readonly PriceSampler _sampler;
+    private readonly PriceSamplingBackgroundService _service;
 
-    public PriceSamplerTests()
+    public PriceSamplingBackgroundServiceTests()
     {
         _store = new PriceHistoryStore(_database.Create());
         _timeProviderMock.Setup(t => t.GetUtcNow()).Returns(Now);
@@ -29,8 +30,8 @@ public sealed class PriceSamplerTests : IDisposable
             SampleInterval = TimeSpan.FromHours(1)
         });
 
-        _sampler = new PriceSampler(_providerMock.Object, _store, _timeProviderMock.Object, options,
-            Mock.Of<ILogger<PriceSampler>>());
+        _service = new PriceSamplingBackgroundService(_providerMock.Object, _store, _timeProviderMock.Object, options,
+            Mock.Of<ILogger<PriceSamplingBackgroundService>>());
     }
 
     public void Dispose() => _database.Dispose();
@@ -42,7 +43,7 @@ public sealed class PriceSamplerTests : IDisposable
         _providerMock.Setup(p => p.GetPriceAsync()).ReturnsAsync(39.90m);
 
         // Act
-        await _sampler.SampleAsync();
+        await _service.SampleAsync();
 
         // Assert
         Assert.Equal(new PricePeriod(39.90m, Now, Now), _store.GetLatest());
@@ -57,7 +58,7 @@ public sealed class PriceSamplerTests : IDisposable
         _providerMock.Setup(p => p.GetPriceAsync()).ReturnsAsync((decimal?)null);
 
         // Act
-        await _sampler.SampleAsync();
+        await _service.SampleAsync();
 
         // Assert
         Assert.Equal(new PricePeriod(39.90m, earlier, earlier), _store.GetLatest());
@@ -70,7 +71,7 @@ public sealed class PriceSamplerTests : IDisposable
         _providerMock.Setup(p => p.GetPriceAsync()).ReturnsAsync((decimal?)null);
 
         // Act
-        await _sampler.SampleAsync();
+        await _service.SampleAsync();
 
         // Assert
         Assert.Null(_store.GetLatest());
@@ -83,7 +84,7 @@ public sealed class PriceSamplerTests : IDisposable
         _providerMock.Setup(p => p.GetPriceAsync()).ThrowsAsync(new InvalidOperationException());
 
         // Act
-        await _sampler.SampleAsync();
+        await _service.SampleAsync();
 
         // Assert
         Assert.Null(_store.GetLatest());

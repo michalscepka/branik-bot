@@ -1,18 +1,19 @@
 using BranikBot.Configuration;
 using BranikBot.Pricing;
+using BranikBot.Pricing.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 
 namespace BranikBot.Tests.Pricing;
 
-public class ExchangeRateSamplerTests
+public class ExchangeRateSamplingBackgroundServiceTests
 {
     private readonly LatestExchangeRate _latestExchangeRate = new();
     private readonly Mock<IExchangeRateProvider> _providerMock = new();
-    private readonly ExchangeRateSampler _sampler;
+    private readonly ExchangeRateSamplingBackgroundService _service;
 
-    public ExchangeRateSamplerTests()
+    public ExchangeRateSamplingBackgroundServiceTests()
     {
         var options = Options.Create(new ExchangeRateConfiguration
         {
@@ -20,8 +21,8 @@ public class ExchangeRateSamplerTests
             SampleInterval = TimeSpan.FromHours(1)
         });
 
-        _sampler = new ExchangeRateSampler(_providerMock.Object, _latestExchangeRate, TimeProvider.System, options,
-            Mock.Of<ILogger<ExchangeRateSampler>>());
+        _service = new ExchangeRateSamplingBackgroundService(_providerMock.Object, _latestExchangeRate, TimeProvider.System, options,
+            Mock.Of<ILogger<ExchangeRateSamplingBackgroundService>>());
     }
 
     [Fact]
@@ -31,7 +32,7 @@ public class ExchangeRateSamplerTests
         _providerMock.Setup(p => p.GetExchangeRateAsync(Currency.Eur)).ReturnsAsync(24.340m);
 
         // Act
-        await _sampler.SampleAsync();
+        await _service.SampleAsync();
 
         // Assert
         Assert.Equal(24.340m, _latestExchangeRate.Get(Currency.Eur));
@@ -45,7 +46,7 @@ public class ExchangeRateSamplerTests
         _providerMock.Setup(p => p.GetExchangeRateAsync(Currency.Eur)).ReturnsAsync((decimal?)null);
 
         // Act
-        await _sampler.SampleAsync();
+        await _service.SampleAsync();
 
         // Assert
         Assert.Equal(24.340m, _latestExchangeRate.Get(Currency.Eur));
@@ -58,7 +59,7 @@ public class ExchangeRateSamplerTests
         _providerMock.Setup(p => p.GetExchangeRateAsync(Currency.Eur)).ReturnsAsync((decimal?)null);
 
         // Act
-        await _sampler.SampleAsync();
+        await _service.SampleAsync();
 
         // Assert
         Assert.Null(_latestExchangeRate.Get(Currency.Eur));
@@ -71,7 +72,7 @@ public class ExchangeRateSamplerTests
         _providerMock.Setup(p => p.GetExchangeRateAsync(Currency.Eur)).ThrowsAsync(new InvalidOperationException());
 
         // Act
-        await _sampler.SampleAsync();
+        await _service.SampleAsync();
 
         // Assert
         Assert.Null(_latestExchangeRate.Get(Currency.Eur));
