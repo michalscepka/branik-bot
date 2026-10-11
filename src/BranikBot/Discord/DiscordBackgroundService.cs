@@ -16,7 +16,7 @@ public class DiscordBackgroundService(
         gatewayClient.MessageCreate += messageHandler.ProcessIncomingMessage;
         gatewayClient.Ready += RefreshStatus;
 
-        // The gateway connects before this service starts, so the first Ready may already have passed.
+        // Ready fires once after login and may come before the line above subscribed, so set the status now as well.
         await botStatus.RefreshAsync();
     }
 
