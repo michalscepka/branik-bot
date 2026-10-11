@@ -29,7 +29,7 @@ Running the bot needs a real Discord token in `Discord:BotToken` (env var `Disco
 
 There is no separate lint step: `EnforceCodeStyleInBuild` and `AnalysisLevel=latest` are set in `Directory.Build.props`, so style violations surface in `dotnet build`.
 
-CI: `tests.yml` runs the test project on pushes and PRs to `main`. `build.yml` builds a multi-arch image and pushes it to Docker Hub when a `v*` tag is pushed. That is the release mechanism (`docker-compose.prod.yml` pulls `mscepka/branik-bot:latest`).
+CI: `tests.yml` runs the test project on pushes and PRs to `main`. `build.yml` builds a multi-arch image and pushes it to Docker Hub when a `v*` tag is pushed. That is the release mechanism (`docker-compose.prod.yml` pulls `mscepka/branik-bot:latest`). The tag without its `v` is passed to the image build as `VERSION` and becomes the assembly version, so a tag must be a valid version number (`v1.2.3`). A local build is `0.0.0-dev` (`Directory.Build.props`). Layers are cached in the `buildcache` tag of the same Docker Hub repository.
 
 ## Architecture
 
@@ -41,10 +41,10 @@ Three projects plus `BranikBot.Tests` (xUnit + Moq, references all of them). Ref
   - `Pricing/` - the shared `Currency` enum and `PricePeriod` record.
 - `BranikBot.Persistence` - SQLite access, references Core. `SqliteDatabase` owns the file, the schema of every table and opens connections. Stores such as `PriceHistoryStore` and `TrustedBotStore` only hold queries. It takes plain values (the file path), not options classes.
 - `BranikBot` - the host, references both. The project root holds only `Program.cs`. The rest is grouped by what it does:
-  - `Discord/` - everything that needs a NetCord type: `DiscordBackgroundService` (gateway wiring), `MessageHandler` (bot filtering and orchestration), `BotMessageReader` and the slash commands in `ConfigCommands`.
+  - `Discord/` - everything that needs a NetCord type: `DiscordBackgroundService` (gateway wiring), `MessageHandler` (bot filtering and orchestration), `BotMessageReader`, `BotStatus` (the status line under the bot's name) and the slash commands in `ConfigCommands`.
   - `Replies/` - `ReplyBuilder`, which has no NetCord dependency. Same namespace as `Replies/` in Core.
-  - `Pricing/` - the HTTP providers (`AkcniCenyProvider`, `CnbExchangeRateProvider`), their interfaces `IMarketPriceProvider` and `IExchangeRateProvider` in `Pricing/Abstractions/`, the samplers (`PriceSamplingBackgroundService`, `ExchangeRateSamplingBackgroundService`) and `LatestExchangeRate` (in-memory rate).
-  - `Configuration/` - options classes bound from appsettings.
+  - `Pricing/` - the HTTP providers (`AkcniCenyProvider`, `CnbExchangeRateProvider`), their interfaces `IMarketPriceProvider` and `IExchangeRateProvider` in `Pricing/Abstractions/` (next to `IPriceSampleListener`, see Status), the samplers (`PriceSamplingBackgroundService`, `ExchangeRateSamplingBackgroundService`) and `LatestExchangeRate` (in-memory rate).
+  - `Configuration/` - options classes bound from appsettings, and `AppVersion` (the version the assembly was built with, logged at startup).
   - `Logging/` - Serilog bootstrap and host setup.
   - `Extensions/` - `ServiceCollectionExtensions`.
 
@@ -71,6 +71,12 @@ Which bots are read is configured per guild by its admins, not in appsettings. `
 
 The commands are registered globally at startup, which is a REST call: the host fails to start if Discord rejects the token.
 
+### Status
+
+`BotStatus` sets the bot's custom status, the line under its name in the member list, to the current price and the bot's version: "Braník za 37,90 Kč · v0.2.0". Without a stored price it shows only the version. The text is built by `StatusText` in Core from the templates in `Messages`.
+
+It is sent on two occasions. `DiscordBackgroundService` subscribes it to the gateway's `Ready` event, because Discord forgets the status whenever the session is re-created (a resumed session keeps it), and once more when it starts, in case the first `Ready` came before it subscribed. `PriceSamplingBackgroundService` calls it through `IPriceSampleListener` after every stored sample, so a new price shows up without a reconnect. The interface keeps `Pricing/` free of Discord types and lets the sampler tests substitute it. A failed update is logged at Debug and not retried: the next `Ready` or sample sends it again.
+
 ### Sampled prices
 
 `PriceSamplingBackgroundService` is a hosted service that calls `AkcniCenyProvider` once at startup and then every `Market:SampleInterval`. The provider scrapes akcniceny.cz (`//span[@itemprop='lowPrice']`) with HtmlAgilityPack and returns `null` on any failure. There is no fallback price: a failed sample stores nothing, so replies keep using the last real price.
@@ -91,7 +97,7 @@ Adding a currency takes three entries: a member of the `Currency` enum named aft
 - C# 14 `extension(T)` blocks for new extension methods.
 - Never `null!` - fix the design instead. The only existing use is on options classes bound from configuration.
 - Primary constructors for dependency injection.
-- Interfaces only at real seams (the HTTP providers in `Pricing/`). Do not add an interface for a class with a single implementation that tests do not need to substitute.
+- Interfaces only at real seams (the HTTP providers and `IPriceSampleListener` in `Pricing/`). Do not add an interface for a class with a single implementation that tests do not need to substitute.
 - Test naming: `MethodName_Scenario_Expected` (Arrange-Act-Assert).
 - System.Text.Json only - never Newtonsoft.Json.
 - NuGet versions go in `Directory.Packages.props` only (central package management) - never in a .csproj.

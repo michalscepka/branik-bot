@@ -5,5 +5,7 @@
         <Nullable>enable</Nullable>
         <AnalysisLevel>latest</AnalysisLevel>
         <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+        <!-- Local builds. The image build passes the real version from the git tag. -->
+        <Version>0.0.0-dev</Version>
     </PropertyGroup>
 </Project>

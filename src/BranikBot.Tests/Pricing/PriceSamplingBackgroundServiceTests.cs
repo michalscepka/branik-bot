@@ -16,6 +16,7 @@ public sealed class PriceSamplingBackgroundServiceTests : IDisposable
     private readonly TempDatabase _database = new();
     private readonly PriceHistoryStore _store;
     private readonly Mock<IMarketPriceProvider> _providerMock = new();
+    private readonly Mock<IPriceSampleListener> _listenerMock = new();
     private readonly Mock<TimeProvider> _timeProviderMock = new();
     private readonly PriceSamplingBackgroundService _service;
 
@@ -30,8 +31,8 @@ public sealed class PriceSamplingBackgroundServiceTests : IDisposable
             SampleInterval = TimeSpan.FromHours(1)
         });
 
-        _service = new PriceSamplingBackgroundService(_providerMock.Object, _store, _timeProviderMock.Object, options,
-            Mock.Of<ILogger<PriceSamplingBackgroundService>>());
+        _service = new PriceSamplingBackgroundService(_providerMock.Object, _store, _listenerMock.Object,
+            _timeProviderMock.Object, options, Mock.Of<ILogger<PriceSamplingBackgroundService>>());
     }
 
     public void Dispose() => _database.Dispose();
@@ -88,5 +89,63 @@ public sealed class PriceSamplingBackgroundServiceTests : IDisposable
 
         // Assert
         Assert.Null(_store.GetLatest());
+    }
+
+    [Fact]
+    public async Task SampleAsync_ProviderReturnsPrice_NotifiesListenerAfterStoring()
+    {
+        // Arrange
+        _providerMock.Setup(p => p.GetPriceAsync()).ReturnsAsync(39.90m);
+        decimal? storedWhenNotified = null;
+        _listenerMock.Setup(l => l.PriceSampledAsync())
+            .Callback(() => storedWhenNotified = _store.GetLatest()?.Price)
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _service.SampleAsync();
+
+        // Assert
+        _listenerMock.Verify(l => l.PriceSampledAsync(), Times.Once);
+        Assert.Equal(39.90m, storedWhenNotified);
+    }
+
+    [Fact]
+    public async Task SampleAsync_ProviderReturnsNoPrice_DoesNotNotifyListener()
+    {
+        // Arrange
+        _providerMock.Setup(p => p.GetPriceAsync()).ReturnsAsync((decimal?)null);
+
+        // Act
+        await _service.SampleAsync();
+
+        // Assert
+        _listenerMock.Verify(l => l.PriceSampledAsync(), Times.Never);
+    }
+
+    [Fact]
+    public async Task SampleAsync_ProviderThrows_DoesNotNotifyListener()
+    {
+        // Arrange
+        _providerMock.Setup(p => p.GetPriceAsync()).ThrowsAsync(new InvalidOperationException());
+
+        // Act
+        await _service.SampleAsync();
+
+        // Assert
+        _listenerMock.Verify(l => l.PriceSampledAsync(), Times.Never);
+    }
+
+    [Fact]
+    public async Task SampleAsync_ListenerThrows_DoesNotThrowAndKeepsStoredPrice()
+    {
+        // Arrange
+        _providerMock.Setup(p => p.GetPriceAsync()).ReturnsAsync(39.90m);
+        _listenerMock.Setup(l => l.PriceSampledAsync()).ThrowsAsync(new InvalidOperationException());
+
+        // Act
+        await _service.SampleAsync();
+
+        // Assert
+        Assert.Equal(new PricePeriod(39.90m, Now, Now), _store.GetLatest());
     }
 }

@@ -46,6 +46,10 @@ public static class Messages
 
     public const string ExchangeRateNote = " Při aktuálním směnném kurzu ve výši {0:C2} za {1}.";
 
+    // The bot's status line in Discord: the current price of a bottle and the bot's version.
+    public const string Status = "Braník za {0:C2} · v{1}";
+    public const string StatusWithoutPrice = "v{0}";
+
     // One unit of a foreign currency, as it reads after "za" in the exchange rate note.
     public static string GetOneUnit(Currency currency)
     {
