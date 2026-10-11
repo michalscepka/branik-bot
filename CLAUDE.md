@@ -87,6 +87,10 @@ Adding a currency takes three entries: a member of the `Currency` enum named aft
 
 `PriceHistoryStore` writes to the SQLite file at `Database:Path` (`data/branik.db`, a Docker volume in both compose files). The `price_history` table has one row per price period: an unchanged price only moves `last_seen_at` forward, a changed price inserts a new row. The table schema lives in `SqliteDatabase`, not in the store. New tables go into the schema in `SqliteDatabase`.
 
+### Backups
+
+`scripts/backup.sh` is not part of the bot or its image. It runs from root's crontab on the Docker host: it finds the host folder behind the container's `/app/data` with `docker inspect`, snapshots the live file with `sqlite3 .backup` (a plain copy could catch a write halfway), runs `PRAGMA integrity_check` on the snapshot and uploads it with `rclone copy` to the remote in `BRANIK_BACKUP_REMOTE` (a Backblaze B2 bucket in production). The README does not mention it. It never deletes on the remote, only local snapshots older than `BRANIK_BACKUP_KEEP_DAYS`. To restore, stop the container and copy a snapshot over `/app/data/branik.db`.
+
 ### Culture
 
 `Program.cs` sets the default thread culture to `cs-CZ`. This affects `{0:C2}` in the reply templates and culture-sensitive parsing. Parsing of external data must pass an explicit culture (see how the parser and providers use `InvariantCulture` / `cs-CZ`). Tests that assert on formatted output depend on this, so the test project sets the same culture once in `TestCulture` (a module initializer).
