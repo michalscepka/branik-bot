@@ -55,6 +55,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PriceHistoryStore>();
         services.AddSingleton<TrustedBotStore>();
         services.AddSingleton<LatestExchangeRate>();
+        services.AddSingleton<BotStatus>();
+        services.AddSingleton<IPriceSampleListener>(sp => sp.GetRequiredService<BotStatus>());
         services.AddHostedService<PriceSamplingBackgroundService>();
         services.AddHostedService<ExchangeRateSamplingBackgroundService>();
 

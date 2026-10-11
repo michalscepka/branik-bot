@@ -10,6 +10,7 @@ namespace BranikBot.Pricing;
 public class PriceSamplingBackgroundService(
     IMarketPriceProvider marketPriceProvider,
     PriceHistoryStore priceHistoryStore,
+    IPriceSampleListener priceSampleListener,
     TimeProvider timeProvider,
     IOptions<MarketConfiguration> configuration,
     ILogger<PriceSamplingBackgroundService> logger) : BackgroundService
@@ -37,6 +38,16 @@ public class PriceSamplingBackgroundService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to store the market price sample");
+            return;
+        }
+
+        try
+        {
+            await priceSampleListener.PriceSampledAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "The price sample listener failed");
         }
     }
 }

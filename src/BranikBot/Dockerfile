@@ -21,13 +21,15 @@ RUN dotnet restore "BranikBot/BranikBot.csproj"
 # Copy the entire source code
 COPY . .
 
-# Build the application
+# Build the application. VERSION comes from the git tag in CI.
+ARG VERSION=0.0.0-dev
 WORKDIR "/src/BranikBot"
-RUN dotnet build "BranikBot.csproj" -c Release -o /app/build
+RUN dotnet build "BranikBot.csproj" -c Release -o /app/build /p:Version=$VERSION
 
 # Publish stage
 FROM build AS publish
-RUN dotnet publish "BranikBot.csproj" -c Release -o /app/publish /p:UseAppHost=false /p:DebugType=None /p:DebugSymbols=false
+ARG VERSION=0.0.0-dev
+RUN dotnet publish "BranikBot.csproj" -c Release -o /app/publish /p:UseAppHost=false /p:DebugType=None /p:DebugSymbols=false /p:Version=$VERSION
 
 # Final stage
 FROM base AS final

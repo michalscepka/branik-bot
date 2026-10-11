@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using BranikBot;
+using BranikBot.Configuration;
 using BranikBot.Extensions;
 using BranikBot.Logging.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -16,7 +17,7 @@ try
     var environmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? Environments.Production;
     Log.Logger = LoggerConfigurationHelper.ConfigureMinimalLogging(environmentName);
 
-    Log.Information("Starting web host on {env} environment.", environmentName);
+    Log.Information("Starting BranikBot {version} on {env} environment.", AppVersion.Current, environmentName);
     var builder = Host.CreateDefaultBuilder(args);
 
     Log.Debug("Use Serilog");
