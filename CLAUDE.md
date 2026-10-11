@@ -73,9 +73,9 @@ The commands are registered globally at startup, which is a REST call: the host 
 
 ### Status
 
-`BotStatus` sets the bot's custom status, the line under its name in the member list, to the current price and the bot's version: "Braník za 37,90 Kč · v0.2.0". Without a stored price it shows only the version. The text is built by `StatusText` in Core from the templates in `Messages`.
+`BotStatus` sets the bot's custom status, the line under its name in the member list, to the current price: "Braník za 37,90 Kč". Without a stored price it sets nothing. The text is the `Status` template in `Messages`. The version is deliberately not shown in Discord, only in the startup log.
 
-It is sent on two occasions. `DiscordBackgroundService` subscribes it to the gateway's `Ready` event, because Discord forgets the status whenever the session is re-created (a resumed session keeps it), and once more when it starts, in case the first `Ready` came before it subscribed. `PriceSamplingBackgroundService` calls it through `IPriceSampleListener` after every stored sample, so a new price shows up without a reconnect. The interface keeps `Pricing/` free of Discord types and lets the sampler tests substitute it. A failed update is logged at Debug and not retried: the next `Ready` or sample sends it again.
+It is sent on two occasions. `DiscordBackgroundService` subscribes it to the gateway's `Ready` event, because Discord forgets the status whenever the session is re-created (a resumed session keeps it), and once more when it starts, in case the first `Ready` came before it subscribed. `PriceSamplingBackgroundService` calls it through `IPriceSampleListener` after every stored sample, so a new price shows up without a reconnect. The interface keeps `Pricing/` free of Discord types and lets the sampler tests substitute it. A failed update is logged as a warning and not retried: the next `Ready` or sample sends it again.
 
 ### Sampled prices
 

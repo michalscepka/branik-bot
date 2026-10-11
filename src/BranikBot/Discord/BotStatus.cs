@@ -1,4 +1,3 @@
-using BranikBot.Configuration;
 using BranikBot.Persistence;
 using BranikBot.Pricing.Abstractions;
 using BranikBot.Replies;
@@ -8,7 +7,7 @@ using NetCord.Gateway;
 
 namespace BranikBot.Discord;
 
-// Shows the current price and the bot's version as the custom status under its name.
+// Shows the current price as the custom status under the bot's name.
 // Discord forgets the status when the session is re-created, so it is sent on every Ready
 // and again after every stored price sample.
 public class BotStatus(
@@ -25,7 +24,11 @@ public class BotStatus(
     {
         try
         {
-            var text = StatusText.Create(priceHistoryStore.GetLatest()?.Price, AppVersion.Current);
+            var latest = priceHistoryStore.GetLatest();
+            if (latest is null)
+                return;
+
+            var text = string.Format(Messages.Status, latest.Price);
             var presence = new PresenceProperties(UserStatusType.Online)
             {
                 Activities = [new UserActivityProperties(ActivityName, UserActivityType.Custom) { State = text }]
@@ -35,8 +38,7 @@ public class BotStatus(
         }
         catch (Exception ex)
         {
-            // Expected while the gateway is not connected. The next Ready or price sample sends it again.
-            logger.LogDebug(ex, "Could not update the bot status");
+            logger.LogWarning(ex, "Could not update the bot status");
         }
     }
 }

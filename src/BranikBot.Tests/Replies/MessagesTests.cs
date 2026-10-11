@@ -82,6 +82,14 @@ public class MessagesTests
         Assert.EndsWith(".", formatted);
     }
 
+    [Theory]
+    [InlineData(37.9, "Braník za 37,90 Kč")]
+    [InlineData(40, "Braník za 40,00 Kč")]
+    public void Status_Price_IsFormattedAsCzechMoney(decimal price, string expected)
+    {
+        Assert.Equal(expected, string.Format(Messages.Status, price));
+    }
+
     [Fact]
     public void GetOneUnit_HomeCurrency_Throws()
     {
