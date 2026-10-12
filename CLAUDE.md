@@ -89,7 +89,7 @@ Adding a currency takes three entries: a member of the `Currency` enum named aft
 
 ### Backups
 
-`scripts/backup.sh` is not part of the bot or its image. It runs from root's crontab on the Docker host: it finds the host folder behind the container's `/app/data` with `docker inspect`, snapshots the live file with `sqlite3 .backup` (a plain copy could catch a write halfway), runs `PRAGMA integrity_check` on the snapshot and uploads it with `rclone copy` to the remote in `BRANIK_BACKUP_REMOTE` (a Backblaze B2 bucket in production). The README does not mention it. It never deletes on the remote, only local snapshots older than `BRANIK_BACKUP_KEEP_DAYS`. To restore, stop the container and copy a snapshot over `/app/data/branik.db`.
+`scripts/backup.sh` is not part of the bot or its image. It runs from root's crontab on the Docker host: it finds the host folder behind the container's `/app/data` with `docker inspect`, snapshots the live file with `sqlite3 .backup` (a plain copy could catch a write halfway), runs `PRAGMA integrity_check` on the snapshot and uploads the snapshot folder with `rclone copy` to the remote in `BRANIK_BACKUP_REMOTE` (a Backblaze B2 bucket in production). The whole folder goes up, not just today's file, so a snapshot whose upload failed is sent by the next run. The README does not mention it. It never deletes on the remote, only local snapshots older than `BRANIK_BACKUP_KEEP_DAYS`. To restore, stop the container and copy a snapshot over `/app/data/branik.db`.
 
 ### Culture
 
