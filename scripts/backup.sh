@@ -40,8 +40,10 @@ fi
 
 mv "$partial" "$snapshot"
 
-# Only uploads, never deletes: the remote keeps every snapshot.
-rclone copy "$snapshot" "$REMOTE"
+# Uploads every local snapshot the remote does not have yet, so a night when the
+# upload failed is caught up by the next run. Never deletes: the remote keeps
+# every snapshot.
+rclone copy "$BACKUP_DIR" "$REMOTE" --include '/branik-*.db'
 
 find "$BACKUP_DIR" -name 'branik-*.db' -mtime +"$KEEP_DAYS" -delete
 
