@@ -36,4 +36,7 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
+RUN mkdir data && chown $APP_UID data
+USER $APP_UID
+
 ENTRYPOINT ["dotnet", "BranikBot.dll"]
